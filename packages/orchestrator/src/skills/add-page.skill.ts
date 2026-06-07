@@ -9,7 +9,7 @@ function deriveNames(req: ClarifiedRequest) {
   return { pageName: pascal, routeUrl: kebab, fileBase: camel };
 }
 
-export default defineSkill({
+const skill = defineSkill({
   name: "add-page",
   description: "新增一个只读页面，适用于「新增 X 页面 / X 榜 / X 排行」类需求，会创建后端聚合接口 + 前端页面组件并注册到路由表。",
 
@@ -81,3 +81,14 @@ export default defineSkill({
     return null;
   },
 });
+
+const baseMatch = skill.match.bind(skill);
+skill.match = (req) => {
+  const haystack = [req.summary, req.fieldName, req.businessRule, req.displayLocation].join(" ").toLowerCase();
+  const mentionsTab = haystack.includes("tab") || haystack.includes("标签页");
+  const mentionsExistingPage = haystack.includes("现有") || haystack.includes("existing");
+  if (mentionsTab && mentionsExistingPage) return 0;
+  return baseMatch(req);
+};
+
+export default skill;

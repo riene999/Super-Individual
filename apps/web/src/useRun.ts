@@ -58,7 +58,7 @@ export function useRun() {
         patch.recallMatches = (ev.payload.matches as RecallMatchView[]) ?? [];
         patch.recallSettled = true;
       }
-      if (ev.type === "plan.done")      patch.phase = "plan";
+      if (ev.type === "plan.done" || ev.type === "plan.generic") patch.phase = "plan";
       if (ev.type === "locate.done") {
         patch.phase = "code";
         if (!prev.recallSettled) patch.recallSettled = true;

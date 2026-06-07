@@ -11,7 +11,7 @@ export default function ReplayBar({ events, onReplay }: Props) {
   const [text, setText] = useState("");
 
   const replayableTypes = [
-    "run.started", "clarify.done", "plan.done", "locate.done", "code.done",
+    "run.started", "clarify.done", "plan.done", "plan.generic", "locate.done", "code.done",
   ];
   const options = events
     .map((e, i) => ({ e, i }))

@@ -1,23 +1,23 @@
 import { scoreAllSkills } from "../skills/registry.js";
+import { genericPlan } from "./generic-plan.js";
 import type { ClarifiedRequest, RepoContext, SkillPlan, Skill } from "../types.js";
 import type { LLMClient } from "../llm/doubao.js";
 
-// 触发 LLM 兜底的两个条件（修正 4）
-const TOP1_CONFIDENCE_THRESHOLD = 0.5;   // top1 < 此值 → 没人有把握
-const TOP1_TOP2_GAP_THRESHOLD = 0.3;     // 差距 < 此值 → 拉锯，LLM 仲裁
+const TOP1_CONFIDENCE_THRESHOLD = 0.5;
+const TOP1_TOP2_GAP_THRESHOLD = 0.3;
 
 export type RoutingDecision = "keyword" | "llm-router";
+export type PlanMode = "skill" | "generic";
 
 export interface PlanResult {
-  skill: Skill;
+  mode: PlanMode;
+  skill: Skill | null;
   plan: SkillPlan;
   score: number;
-  /** 路由决策：快路径还是 LLM 兜底 */
   by: RoutingDecision;
-  /** 全量 skill 评分快照，写到事件 payload 用 */
   candidates: Array<{ name: string; score: number }>;
-  /** 当 by === "llm-router" 时给出 LLM 的选型理由 */
   routerReason?: string;
+  genericReason?: string;
 }
 
 interface Candidate {
@@ -33,7 +33,7 @@ async function llmRoute(
   llm: LLMClient,
 ): Promise<{ pickedName: string; reason: string }> {
   const list = candidates
-    .map((c, i) => `${i + 1}. ${c.skill.name} (关键词分=${c.score.toFixed(2)}) — ${c.skill.description}`)
+    .map((c, i) => `${i + 1}. ${c.skill.name}（关键词分=${c.score.toFixed(2)}）- ${c.skill.description}`)
     .join("\n");
 
   const result = await llm.chat([
@@ -48,7 +48,7 @@ async function llmRoute(
 候选 skill：
 ${list}
 
-请挑出最合适的 skill，或返回 "none"。输出格式：{"picked":"<skill-name|none>","reason":"<一句话>"}`,
+请选择最合适的 skill，或返回 "none"。输出格式：{"picked":"<skill-name|none>","reason":"<一句话理由>"}`,
     },
   ], undefined, { agent: "plan:router" });
 
@@ -66,6 +66,31 @@ function shouldFallback(scored: Candidate[]): boolean {
   return false;
 }
 
+async function runGeneric(
+  req: ClarifiedRequest,
+  ctx: RepoContext,
+  llm: LLMClient,
+  args: {
+    score: number;
+    candidates: Array<{ name: string; score: number }>;
+    routerReason?: string;
+    genericReason: string;
+  },
+): Promise<PlanResult> {
+  const plan = await genericPlan(req, ctx, llm);
+  console.log(`[plan] mode=generic reason="${args.genericReason}"`);
+  return {
+    mode: "generic",
+    skill: null,
+    plan,
+    score: args.score,
+    by: "llm-router",
+    candidates: args.candidates,
+    routerReason: args.routerReason,
+    genericReason: args.genericReason,
+  };
+}
+
 export const planAgent = {
   async run(req: ClarifiedRequest, ctx: RepoContext, llm: LLMClient): Promise<PlanResult> {
     const scored = await scoreAllSkills(req);
@@ -75,25 +100,52 @@ export const planAgent = {
       const top = scored[0];
       const plan = await top.skill.plan(req, ctx);
       console.log(`[plan] by=keyword skill=${top.skill.name} score=${top.score.toFixed(2)}`);
-      return { skill: top.skill, plan, score: top.score, by: "keyword", candidates };
+      return { mode: "skill", skill: top.skill, plan, score: top.score, by: "keyword", candidates };
     }
 
-    // LLM 兜底
-    if (scored.length === 0) throw new Error("没有任何已注册的 skill");
+    if (scored.length === 0) {
+      return runGeneric(req, ctx, llm, {
+        score: 0,
+        candidates,
+        genericReason: "没有已注册的 skill",
+      });
+    }
+
     console.log(`[plan] 触发 LLM 兜底 (top1=${scored[0].score.toFixed(2)}, top2=${scored[1]?.score.toFixed(2) ?? "n/a"})`);
-
     const { pickedName, reason } = await llmRoute(req, scored, llm);
+
     if (pickedName === "none") {
-      throw new Error(`LLM 兜底选型：no skill matches. reason: ${reason}`);
+      return runGeneric(req, ctx, llm, {
+        score: scored[0]?.score ?? 0,
+        candidates,
+        routerReason: reason,
+        genericReason: `没有 skill 达到阈值；最佳候选 ${scored[0]?.skill.name ?? "none"}=${(scored[0]?.score ?? 0).toFixed(2)}`,
+      });
     }
+
     const picked = scored.find((c) => c.skill.name === pickedName);
     if (!picked) {
-      throw new Error(`LLM 兜底返回未知 skill: "${pickedName}". reason: ${reason}`);
+      return runGeneric(req, ctx, llm, {
+        score: scored[0]?.score ?? 0,
+        candidates,
+        routerReason: reason,
+        genericReason: `LLM router 返回未知 skill: ${pickedName}`,
+      });
+    }
+
+    if (picked.score < TOP1_CONFIDENCE_THRESHOLD) {
+      return runGeneric(req, ctx, llm, {
+        score: picked.score,
+        candidates,
+        routerReason: reason,
+        genericReason: `LLM router 选择 ${picked.skill.name}=${picked.score.toFixed(2)}，低于阈值 ${TOP1_CONFIDENCE_THRESHOLD}`,
+      });
     }
 
     const plan = await picked.skill.plan(req, ctx);
     console.log(`[plan] by=llm-router skill=${picked.skill.name} reason="${reason}"`);
     return {
+      mode: "skill",
       skill: picked.skill,
       plan,
       score: picked.score,

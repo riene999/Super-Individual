@@ -57,7 +57,9 @@ export interface PartialMemory {
   runId: string;
   ts: number;
   summary: string;
-  skillUsed: string;
+  mode: "skill" | "generic";
+  skillUsed: string | null;
+  genericPlanFiles?: string[];
   changedFiles: string[];
   clarifications: ClarificationQA[];
   outcome: "verified" | "failed";
@@ -91,7 +93,12 @@ export function buildPartialFromEvents(runId: string): PartialMemory | null {
 
   // plan.done 拿 skillName
   const planDone = events.find((e) => e.type === "plan.done");
-  const skillUsed = String(planDone?.payload?.skillName ?? "");
+  const planGeneric = events.find((e) => e.type === "plan.generic");
+  const mode: "skill" | "generic" = planGeneric ? "generic" : "skill";
+  const skillUsed = planGeneric ? null : String(planDone?.payload?.skillName ?? "");
+  const genericPlanFiles = planGeneric
+    ? ((planGeneric.payload.files as Array<{ path?: string }> | undefined)?.map((f) => String(f.path ?? "")).filter(Boolean) ?? [])
+    : undefined;
 
   // commit.done 优先（含 git 实际 commit 的文件），降级到 code.done.files / locate.done.files
   const commitDone = events.find((e) => e.type === "commit.done");
@@ -112,9 +119,9 @@ export function buildPartialFromEvents(runId: string): PartialMemory | null {
   const verified = events.some((e) => e.type === "verify.done");
   const outcome: "verified" | "failed" = (completed && verified) ? "verified" : "failed";
 
-  if (!skillUsed || !summary) return null;
+  if ((!skillUsed && mode === "skill") || !summary) return null;
 
-  return { runId, ts: start.ts, summary, skillUsed, changedFiles, clarifications, outcome };
+  return { runId, ts: start.ts, summary, mode, skillUsed, genericPlanFiles, changedFiles, clarifications, outcome };
 }
 
 // ────────────────────────────────────────────────────────────

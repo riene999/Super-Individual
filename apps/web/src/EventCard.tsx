@@ -11,6 +11,7 @@ const EVENT_STYLES: Record<string, EventStyle> = {
   "clarify.questions": { title: "Clarify questions", icon: "ti-help", tone: "gray" },
   "clarify.done":      { title: "Clarify done", icon: "ti-check", tone: "success" },
   "plan.done":         { title: "Plan matched", icon: "ti-list-check", tone: "gray" },
+  "plan.generic":      { title: "Plan generic", icon: "ti-bulb", tone: "gray" },
   "recall.stale":      { title: "Recall stale", icon: "ti-alert-triangle", tone: "warn" },
   "recall.dismissed":  { title: "Recall dismissed", icon: "ti-history-off", tone: "gray" },
   "aspect.scanned":    { title: "Aspect scanned", icon: "ti-search", tone: "purple" },
@@ -58,6 +59,19 @@ function fmtPayload(type: string, payload: Record<string, unknown>): string {
       ? `\nCandidates: ${candidates.map((c) => `${c.name}=${c.score.toFixed(2)}`).join("  ")}`
       : "";
     return `Skill: ${payload.skillName} · score ${Number(payload.score ?? 0).toFixed(2)} · by ${by}${reason}${scoreBoard}\n` +
+      files.map((f, i) => `${i + 1}. [${f.mode}] ${f.path}\n   ${f.instruction}`).join("\n");
+  }
+  if (type === "plan.generic") {
+    const files = (payload.files as Array<{ path: string; mode: string; instruction: string }>) ??
+      ((payload.plan as Record<string, unknown> | undefined)?.files as Array<{ path: string; mode: string; instruction: string }> | undefined) ??
+      [];
+    const candidates = (payload.candidates as Array<{ name: string; score: number }>) ?? [];
+    const reason = payload.reason ? `\nreason: ${payload.reason}` : "";
+    const routerReason = payload.routerReason ? `\nrouter: ${payload.routerReason}` : "";
+    const scoreBoard = candidates.length
+      ? `\nCandidates: ${candidates.map((c) => `${c.name}=${c.score.toFixed(2)}`).join("  ")}`
+      : "";
+    return `无匹配 skill，走通用推理路径${reason}${routerReason}${scoreBoard}\n` +
       files.map((f, i) => `${i + 1}. [${f.mode}] ${f.path}\n   ${f.instruction}`).join("\n");
   }
   if (type === "locate.done") {
@@ -110,7 +124,7 @@ function fmtPayload(type: string, payload: Record<string, unknown>): string {
 }
 
 function eventMeta(type: string, event: RunEvent): string {
-  if (type === "plan.done") return `by ${String(event.payload.by ?? "keyword")}`;
+  if (type === "plan.done" || type === "plan.generic") return `by ${String(event.payload.by ?? "keyword")}`;
   if (type === "recall.stale") {
     const stale = ((event.payload.stale as string[]) ?? []).length;
     const valid = ((event.payload.valid as string[]) ?? []).length;

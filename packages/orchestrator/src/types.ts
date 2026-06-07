@@ -74,6 +74,7 @@ export type EventType =
   | "clarify.questions"
   | "clarify.done"
   | "plan.done"
+  | "plan.generic"
   | "recall.matched"
   | "recall.stale"
   | "recall.dismissed"

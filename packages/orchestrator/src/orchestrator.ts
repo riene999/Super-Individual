@@ -12,10 +12,11 @@ import { aspectScan, filterRecallForScan } from "./agents/aspect-scan.js";
 import { buildQuestionsFromAspects } from "./agents/clarify.js";
 import { clarifyAgent } from "./agents/clarify.js";
 import { planAgent } from "./agents/plan.js";
+import { genericPlan, genericSkill } from "./agents/generic-plan.js";
 import { locateAgent } from "./agents/locate.js";
 import { codeAgent } from "./agents/code.js";
 import { verifyAgent } from "./agents/verify.js";
-import type { RunEvent, ClarifiedRequest, ChangeSet, Skill } from "./types.js";
+import type { RunEvent, ClarifiedRequest, ClarifyingQuestion, ChangeSet, Skill } from "./types.js";
 
 const MAX_VERIFY_RETRIES = 2;
 
@@ -154,29 +155,49 @@ async function runPipeline(
   runPhase.set(runId, "plan");
   const ctx = repo.getContext();
   const planResult = await planAgent.run(analysis.req, ctx, llm);
-  emitAndBroadcast(runId, "plan.done", {
-    plan: planResult.plan,
-    skillName: planResult.skill.name,
-    score: planResult.score,
-    by: planResult.by,
-    candidates: planResult.candidates,
-    routerReason: planResult.routerReason,
-  });
-  const skill = planResult.skill;
+  if (planResult.mode === "generic") {
+    emitAndBroadcast(runId, "plan.generic", {
+      mode: "generic",
+      plan: planResult.plan,
+      files: planResult.plan.files,
+      score: planResult.score,
+      by: planResult.by,
+      candidates: planResult.candidates,
+      routerReason: planResult.routerReason,
+      reason: planResult.genericReason,
+    });
+  } else {
+    emitAndBroadcast(runId, "plan.done", {
+      mode: "skill",
+      plan: planResult.plan,
+      skillName: planResult.skill!.name,
+      score: planResult.score,
+      by: planResult.by,
+      candidates: planResult.candidates,
+      routerReason: planResult.routerReason,
+    });
+  }
+  const skill = planResult.skill ?? genericSkill;
 
   // ── 2.5. aspectScan（WS-4 按需追问的核心）──────────
-  runPhase.set(runId, "aspect-scan");
-  const scanResult = await aspectScan(llm, {
-    runId,
-    rawText,
-    candidateAspects: aspectUnion,
-    recalledHistory: filterRecallForScan(recallMatchesForScan),
-  });
+  runPhase.set(runId, planResult.mode === "generic" ? "clarify:generic" : "aspect-scan");
+  let scanForSkill: Awaited<ReturnType<typeof aspectScan>>["items"] = [];
+  let questions: ClarifyingQuestion[] = [];
+
+  if (planResult.mode === "generic") {
+    questions = await clarifyAgent.genericQuestions(rawText, analysis.req, llm, runId);
+  } else {
+    const scanResult = await aspectScan(llm, {
+      runId,
+      rawText,
+      candidateAspects: aspectUnion,
+      recalledHistory: filterRecallForScan(recallMatchesForScan),
+    });
 
   // 加固 2 末尾：过滤到属于选中 skill 的 aspect（跨 skill 同名 aspect 由 skill 内的语义决定）
-  const skillAspectSet = new Set(skill.possibleAspects);
-  const scanForSkill = scanResult.items.filter((it) => skillAspectSet.has(it.aspect));
-  emitAndBroadcast(runId, "aspect.scanned", {
+    const skillAspectSet = new Set(skill.possibleAspects);
+    scanForSkill = scanResult.items.filter((it) => skillAspectSet.has(it.aspect));
+    emitAndBroadcast(runId, "aspect.scanned", {
     skillName: skill.name,
     all: scanResult.items,
     forSkill: scanForSkill,
@@ -185,16 +206,18 @@ async function runPipeline(
       fromHistory:  scanForSkill.filter((s) => s.status === "from-history").length,
       needsAsking:  scanForSkill.filter((s) => s.status === "needs-asking").length,
     },
-  });
+    });
 
   // ── 2.6. 步骤 B：对 needs-asking 的 aspect 拼问题（≥2 个时 LLM 打磨）──
-  const questions = await buildQuestionsFromAspects(scanForSkill, skill, llm, runId);
+    questions = await buildQuestionsFromAspects(scanForSkill, skill, llm, runId);
+  }
 
   // ── 1.10. Emit clarify.questions（含 aspectScanResult 供前端审计）──
   emitAndBroadcast(runId, "clarify.questions", {
     questions,
     partial: analysis.req,
     aspectScan: scanForSkill,
+    mode: planResult.mode,
   });
 
   // ── 3. Resolve（仅当有问题要等用户时）──
@@ -216,7 +239,9 @@ async function runPipeline(
   emitAndBroadcast(runId, "clarify.done", { req });
 
   // ── 用 final req 重新算一遍 plan.files（partial 的 fieldName/businessRule 可能与 PM 实答略异）──
-  const plan = await skill.plan(req, ctx);
+  const plan = planResult.mode === "generic"
+    ? await genericPlan(req, ctx, llm)
+    : await skill.plan(req, ctx);
 
   runPhase.set(runId, "locate");
 

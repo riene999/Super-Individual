@@ -101,6 +101,48 @@ export const clarifyAgent = {
       answers,
     };
   },
+
+  async genericQuestions(
+    rawText: string,
+    partial: ClarifiedRequest,
+    llm: LLMClient,
+    runId: string,
+  ): Promise<ClarifyingQuestion[]> {
+    try {
+      const result = await llm.chat([
+        {
+          role: "system",
+          content: "你是产品需求澄清助手。只输出严格 JSON，不要输出解释。",
+        },
+        {
+          role: "user",
+          content: `判断下面的需求在进入代码修改前是否还有必须澄清的地方。
+
+原始需求：${rawText}
+
+当前结构化理解：
+${JSON.stringify(partial, null, 2)}
+
+输出格式：{"questions":["问题1","问题2"]}
+
+要求：
+- 返回 0 到 3 个问题。
+- 只问真正会影响代码修改安全性的问题。
+- 如果需求已经清楚，返回 {"questions":[]}。`,
+        },
+      ], { temperature: 0.1, maxTokens: 512 }, { agent: "clarify:generic", runId });
+
+      const data = parseJson(result.text) as { questions?: unknown };
+      if (!Array.isArray(data.questions)) return [];
+      return data.questions
+        .filter((q): q is string => typeof q === "string" && q.trim().length > 0)
+        .slice(0, 3)
+        .map((q) => ({ q: q.trim(), aspect: "other" }));
+    } catch (err) {
+      console.warn(`[clarify:generic] 生成澄清问题失败，按无需追问继续：${(err as Error).message}`);
+      return [];
+    }
+  },
 };
 
 // ────────────────────────────────────────────────────────────

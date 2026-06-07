@@ -31,7 +31,9 @@ export interface RequestMemory {
   runId: string;
   ts: number;
   summary: string;            // 复用 ClarifiedRequest.summary，不二次生成
-  skillUsed: string;
+  mode?: "skill" | "generic";
+  skillUsed: string | null;
+  genericPlanFiles?: string[];
   entities: ExtractedEntities;
   changedFiles: string[];
   clarifications: ClarificationQA[];

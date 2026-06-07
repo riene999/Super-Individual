@@ -13,7 +13,7 @@ const SYSTEM = `你是代码变更结构化分析器。只输出 JSON，不加�
  */
 function buildPrompt(
   summary: string,
-  skillUsed: string,
+  skillUsed: string | null,
   changedFiles: string[] | undefined,
   clarifications: ClarificationQA[] | undefined,
 ): string {
@@ -70,7 +70,7 @@ function toStringArray(v: unknown): string[] {
   return v.filter((x): x is string => typeof x === "string" && x.trim().length > 0).map((s) => s.trim());
 }
 
-function fallbackEntities(skillUsed: string, changedFiles?: string[]): ExtractedEntities {
+function fallbackEntities(skillUsed: string | null, changedFiles?: string[]): ExtractedEntities {
   return {
     domainObjects: [],
     operations: skillUsed ? [skillUsed] : [],
@@ -89,7 +89,7 @@ export async function extractEntities(
   args: {
     runId: string;
     summary: string;
-    skillUsed: string;
+    skillUsed: string | null;
     /** 沉淀时必填，query 时省略 */
     changedFiles?: string[];
     /** 沉淀/query 都可有可无 */
