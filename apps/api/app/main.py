@@ -87,6 +87,16 @@ async def setup_repo(body: RepoSetup):
         raise HTTPException(status_code=400, detail=err(str(e)))
 
 
+@app.post("/api/repos/reset")
+async def reset_repo(body: RepoSetup):
+    loop = asyncio.get_event_loop()
+    try:
+        repo = await loop.run_in_executor(None, ConduitRepo.reset_from_url, body.repoUrl)
+        return {"nwo": repo.upstream_nwo, "status": "ready", "reset": True}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=err(str(e)))
+
+
 @app.get("/api/health")
 async def health():
     return {"ok": True}

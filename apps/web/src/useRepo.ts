@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 
 const API = "/api";
 
-export type RepoStatus = "idle" | "cloning" | "ready" | "error";
+export type RepoStatus = "idle" | "cloning" | "resetting" | "ready" | "error";
 
 export interface RepoState {
   repoUrl: string;
@@ -49,5 +49,22 @@ export function useRepo() {
     }
   }, []);
 
-  return { state, setRepoUrl, cloneRepo };
+  const resetRepo = useCallback(async (repoUrl: string) => {
+    if (!repoUrl.trim()) return;
+    setState((prev) => ({ ...prev, status: "resetting", error: null }));
+    try {
+      const res = await fetch(`${API}/repos/reset`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repoUrl: repoUrl.trim() }),
+      });
+      const data = await res.json() as { nwo?: string; error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Reset failed");
+      setState((prev) => ({ ...prev, nwo: data.nwo ?? prev.nwo, status: "ready" }));
+    } catch (e) {
+      setState((prev) => ({ ...prev, status: "error", error: String(e) }));
+    }
+  }, []);
+
+  return { state, setRepoUrl, cloneRepo, resetRepo };
 }

@@ -68,6 +68,12 @@ class ConduitRepo:
 
         return cls(local_path, upstream_nwo=nwo)
 
+    @classmethod
+    def reset_from_url(cls, repo_url: str) -> "ConduitRepo":
+        repo = cls.from_url(repo_url)
+        repo.reset_to_original()
+        return repo
+
     def read_file(self, relative_path: str) -> str:
         return (self.repo_path / relative_path).read_text(encoding="utf-8")
 
@@ -187,6 +193,46 @@ class ConduitRepo:
             detail = (r.stderr or r.stdout or "").strip()
             raise RuntimeError(f"git {' '.join(args)} failed: {detail}")
         return r
+
+    def _original_remote(self) -> str:
+        remotes = set(self._run_git(["remote"]).stdout.split())
+        if "upstream" in remotes:
+            return "upstream"
+        if self.upstream_nwo:
+            self._run_git(["remote", "add", "upstream", f"https://github.com/{self.upstream_nwo}.git"])
+            return "upstream"
+        if "origin" in remotes:
+            return "origin"
+        raise RuntimeError("No git remote found for repository reset")
+
+    def _remote_default_branch(self, remote: str) -> str:
+        r = subprocess.run(
+            ["git", "symbolic-ref", "--short", f"refs/remotes/{remote}/HEAD"],
+            cwd=self.repo_path,
+            capture_output=True,
+            text=True,
+        )
+        if r.returncode == 0 and "/" in r.stdout.strip():
+            return r.stdout.strip().split("/", 1)[1]
+
+        for branch in ("main", "master"):
+            r = subprocess.run(["git", "rev-parse", "--verify", f"{remote}/{branch}"], cwd=self.repo_path, capture_output=True, text=True)
+            if r.returncode == 0:
+                return branch
+        raise RuntimeError(f"Cannot determine default branch for remote {remote}")
+
+    def reset_to_original(self) -> None:
+        index_lock = self.repo_path / ".git" / "index.lock"
+        if index_lock.exists():
+            raise RuntimeError(f"Git index lock exists at {index_lock}; remove it after confirming no git process is running.")
+
+        remote = self._original_remote()
+        self._run_git(["fetch", remote, "--prune"])
+        subprocess.run(["git", "remote", "set-head", remote, "-a"], cwd=self.repo_path, capture_output=True, text=True)
+        branch = self._remote_default_branch(remote)
+        self._run_git(["checkout", "-B", branch, f"{remote}/{branch}"])
+        self._run_git(["reset", "--hard", f"{remote}/{branch}"])
+        self._run_git(["clean", "-fd", "-e", "node_modules/", "-e", "frontend/node_modules/", "-e", "backend/node_modules/"])
 
     def stage_and_commit(self, message: str, paths: list[str] | None = None) -> None:
         index_lock = self.repo_path / ".git" / "index.lock"

@@ -24,7 +24,7 @@ function fmtCost(v: number): string {
 export default function App() {
   const [text, setText] = useState(DEMO_PROMPT);
   const { state, startRun, stopRun, resumeRun, submitAnswers, replayFrom, replayRunFrom, dismissRecall } = useRun();
-  const { state: repoState, setRepoUrl, cloneRepo } = useRepo();
+  const { state: repoState, setRepoUrl, cloneRepo, resetRepo } = useRepo();
   const feedRef = useRef<HTMLDivElement>(null);
   const [running, setRunning] = useState(false);
   const [metricsSignal, setMetricsSignal] = useState(0);
@@ -58,6 +58,18 @@ export default function App() {
     if (!text.trim() || !repoReady) return;
     setRunning(true);
     await startRun(text.trim(), repoState.repoUrl);
+  };
+
+  const handleStartNewRun = async () => {
+    if (!text.trim() || !repoReady || running) return;
+    setRunning(true);
+    await startRun(text.trim(), repoState.repoUrl);
+  };
+
+  const handleResetRepo = async (repoUrl: string) => {
+    const ok = window.confirm("初始化会丢弃该仓库的本地代码改动，并恢复到原始远端默认分支。确认继续？");
+    if (!ok) return;
+    await resetRepo(repoUrl);
   };
 
   const handleDeleteRunHistory = async (run: RecentRun) => {
@@ -116,7 +128,7 @@ export default function App() {
 
       <main className="layout">
         <section className="main-col">
-          <RepoPanel state={repoState} onUrlChange={setRepoUrl} onClone={cloneRepo} />
+          <RepoPanel state={repoState} onUrlChange={setRepoUrl} onClone={cloneRepo} onReset={handleResetRepo} resetDisabled={running} />
           <div className="input-card">
             <textarea
               className="input-text"
@@ -131,15 +143,29 @@ export default function App() {
                 <span><i className="ti ti-history" aria-hidden="true" />历史召回 启用</span>
                 <span><i className="ti ti-search" aria-hidden="true" />aspect 扫描 启用</span>
               </div>
+              <div className="run-actions">
               <button
-                className={`run-button ${running ? "stop" : state.cancelled ? "resume" : ""}`}
+                className={`run-button ${running ? "stop" : state.cancelled ? "resume" : "play"}`}
                 onClick={handleRunButton}
                 disabled={(running && state.phase === "stopping") || (!running && !state.cancelled && (!text.trim() || !repoReady))}
-                title={!repoReady && !running && !state.cancelled ? "请先 Clone 目标仓库" : undefined}
+                title={!repoReady && !running && !state.cancelled ? "请先 Clone 目标仓库" : running ? "停止" : state.cancelled ? "继续" : "运行"}
+                aria-label={running ? "停止" : state.cancelled ? "继续" : "运行"}
               >
-                {running ? (state.phase === "stopping" ? "停止中…" : "停止") : state.cancelled ? "继续" : "运行"}
-                <i className={`ti ${running ? "ti-player-stop" : state.cancelled ? "ti-rewind" : "ti-arrow-right"}`} aria-hidden="true" />
+                {running ? "停止" : state.cancelled ? "继续" : null}
+                <i className={`ti ${running ? "ti-player-stop" : state.cancelled ? "ti-rewind" : "ti-player-play"}`} aria-hidden="true" />
               </button>
+              {state.cancelled && !running && (
+                <button
+                  className="run-button play restart"
+                  onClick={handleStartNewRun}
+                  disabled={!text.trim() || !repoReady}
+                  title="重新开始"
+                  aria-label="重新开始"
+                >
+                  <i className="ti ti-player-play" aria-hidden="true" />
+                </button>
+              )}
+              </div>
             </div>
           </div>
 
