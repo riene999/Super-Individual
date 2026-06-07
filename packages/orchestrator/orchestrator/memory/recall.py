@@ -38,7 +38,8 @@ def score(query: ExtractedEntities, candidate: RequestMemory) -> RecallMatch:
     return RecallMatch(memory=candidate, score=min(s, 1.0), matchedDimensions=dims)
 
 
-def recall(query: ExtractedEntities, memories: list[RequestMemory], top_k: int = 3, min_score: float = 0.3) -> list[RecallMatch]:
-    scored = [score(query, m) for m in memories]
+def recall(query: ExtractedEntities, memories: list[RequestMemory], top_k: int = 3, min_score: float = 0.3, repo_nwo: str | None = None) -> list[RecallMatch]:
+    candidates = [m for m in memories if m.repoNwo == repo_nwo] if repo_nwo is not None else memories
+    scored = [score(query, m) for m in candidates]
     return sorted([m for m in scored if m.score >= min_score], key=lambda x: x.score, reverse=True)[:top_k]
 

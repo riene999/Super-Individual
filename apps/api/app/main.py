@@ -10,6 +10,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from orchestrator.metrics.aggregator import aggregate_global, aggregate_run, compare_runs
+from orchestrator.repo.conduit import ConduitRepo, REPOS_DIR
 from orchestrator.orchestrator import (
     bus,
     dismiss_recall,
@@ -33,6 +34,11 @@ app.add_middleware(
 
 class RunCreate(BaseModel):
     text: str
+    repoUrl: str | None = None
+
+
+class RepoSetup(BaseModel):
+    repoUrl: str
 
 
 class DismissRecall(BaseModel):
@@ -54,6 +60,29 @@ def err(msg: str) -> dict[str, str]:
     return {"error": msg}
 
 
+@app.get("/api/repos")
+async def list_repos():
+    result = []
+    if REPOS_DIR.exists():
+        for owner_dir in REPOS_DIR.iterdir():
+            if not owner_dir.is_dir():
+                continue
+            for repo_dir in owner_dir.iterdir():
+                if repo_dir.is_dir() and (repo_dir / ".git").exists():
+                    result.append({"nwo": f"{owner_dir.name}/{repo_dir.name}"})
+    return result
+
+
+@app.post("/api/repos")
+async def setup_repo(body: RepoSetup):
+    loop = asyncio.get_event_loop()
+    try:
+        repo = await loop.run_in_executor(None, ConduitRepo.from_url, body.repoUrl)
+        return {"nwo": repo.upstream_nwo, "status": "ready"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=err(str(e)))
+
+
 @app.get("/api/health")
 async def health():
     return {"ok": True}
@@ -70,7 +99,7 @@ async def runs(body: RunCreate):
     text = body.text.strip()
     if not text:
         raise HTTPException(status_code=400, detail=err("text is required"))
-    run_id = await start_run(text)
+    run_id = await start_run(text, body.repoUrl)
     return {"runId": run_id}
 
 

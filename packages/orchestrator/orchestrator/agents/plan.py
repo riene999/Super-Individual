@@ -62,7 +62,22 @@ async def _llm_route(req: ClarifiedRequest, scored: list[dict[str, object]], llm
         None,
         {"agent": "plan:router"},
     )
-    return json.loads(result["text"].strip().removeprefix("```json").removesuffix("```").strip())
+    text = result["text"].strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[1] if "\n" in text else text
+        if text.endswith("```"):
+            text = text[:-3]
+    try:
+        return json.loads(text.strip())
+    except Exception:
+        start = text.find("{")
+        end = text.rfind("}")
+        if start >= 0 and end > start:
+            try:
+                return json.loads(text[start : end + 1])
+            except Exception:
+                pass
+        return {"picked": "none", "reason": "router returned invalid JSON; falling back to generic plan"}
 
 
 async def _run_generic(
@@ -91,6 +106,9 @@ async def run(req: ClarifiedRequest, ctx: RepoContext, llm: LLMClient) -> PlanRe
 
     if not scored:
         return await _run_generic(req, ctx, llm, score=0, candidates=candidates, generic_reason="没有已注册的 skill")
+
+    if float(scored[0]["score"]) <= 0:
+        return await _run_generic(req, ctx, llm, score=0, candidates=candidates, generic_reason="no registered skill matched the request")
 
     routed = await _llm_route(req, scored, llm)
     picked_name = routed.get("picked", "none")
@@ -132,4 +150,3 @@ async def run(req: ClarifiedRequest, ctx: RepoContext, llm: LLMClient) -> PlanRe
             generic_reason=f"LLM router 选择 {skill.name}={float(picked['score']):.2f}，低于阈值 {TOP1_CONFIDENCE_THRESHOLD}",
         )
     return PlanResult("skill", skill, await skill.plan(req, ctx), float(picked["score"]), "llm-router", candidates, reason)
-

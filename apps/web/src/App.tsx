@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRun } from "./useRun.js";
+import { useRepo } from "./useRepo.js";
 import { useGlobalMetrics, useRunMetrics } from "./useMetrics.js";
 import EventCard from "./EventCard.js";
 import ClarifyBox from "./ClarifyBox.js";
@@ -7,6 +8,7 @@ import ReplayBar from "./ReplayBar.js";
 import RunMetricsCard from "./RunMetricsCard.js";
 import MetricsPanel from "./MetricsPanel.js";
 import RecallCard from "./RecallCard.js";
+import RepoPanel from "./RepoPanel.js";
 import { computePrefill } from "./recallTypes.js";
 import type { PrefillState } from "./recallTypes.js";
 
@@ -19,6 +21,7 @@ function fmtCost(v: number): string {
 export default function App() {
   const [text, setText] = useState(DEMO_PROMPT);
   const { state, startRun, submitAnswers, replayFrom, dismissRecall } = useRun();
+  const { state: repoState, setRepoUrl, cloneRepo } = useRepo();
   const feedRef = useRef<HTMLDivElement>(null);
   const [running, setRunning] = useState(false);
   const [metricsSignal, setMetricsSignal] = useState(0);
@@ -34,10 +37,12 @@ export default function App() {
     setMetricsSignal((s) => s + 1);
   }, [state.events.length, state.done]);
 
+  const repoReady = repoState.status === "ready";
+
   const handleStart = async () => {
-    if (!text.trim() || running) return;
+    if (!text.trim() || running || !repoReady) return;
     setRunning(true);
-    await startRun(text.trim());
+    await startRun(text.trim(), repoState.repoUrl);
   };
 
   useEffect(() => {
@@ -56,7 +61,7 @@ export default function App() {
   const phaseLabel: Record<string, string> = {
     idle: "", starting: "启动中…", clarify: "等待澄清…",
     plan: "规划中…", locate: "定位文件…", code: "生成代码…",
-    verify: "验证中…", commit: "提交中…", done: "完成", replaying: "重放中…",
+    verify: "验证中…", commit: "提交中…", pr: "提交 PR…", done: "完成", replaying: "重放中…",
   };
 
   const summary = globalMetrics
@@ -81,6 +86,7 @@ export default function App() {
 
       <main className="layout">
         <section className="main-col">
+          <RepoPanel state={repoState} onUrlChange={setRepoUrl} onClone={cloneRepo} />
           <div className="input-card">
             <textarea
               className="input-text"
@@ -95,7 +101,7 @@ export default function App() {
                 <span><i className="ti ti-history" aria-hidden="true" />历史召回 启用</span>
                 <span><i className="ti ti-search" aria-hidden="true" />aspect 扫描 启用</span>
               </div>
-              <button className="run-button" onClick={handleStart} disabled={running || !text.trim()}>
+              <button className="run-button" onClick={handleStart} disabled={running || !text.trim() || !repoReady} title={!repoReady ? "请先 Clone 目标仓库" : undefined}>
                 {running ? (phaseLabel[state.phase] ?? "运行中…") : "运行"}
                 <i className="ti ti-arrow-right" aria-hidden="true" />
               </button>

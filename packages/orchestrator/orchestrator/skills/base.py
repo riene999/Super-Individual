@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Callable
 
 from orchestrator.llm.doubao import LLMClient
-from orchestrator.repo.conduit import create_conduit_repo
+from orchestrator.repo.conduit import ConduitRepo
 from orchestrator.types import ChangeSet, ClarifiedRequest, FileChange, FilePatch, FileStep, RepoContext, SkillPlan
 
 
@@ -61,7 +62,7 @@ async def default_locate(
     ctx: RepoContext,
     reference_for: ReferenceProvider | None = None,
 ) -> ChangeSet:
-    repo = create_conduit_repo()
+    repo = ConduitRepo(Path(ctx.repoPath))
     files: list[FileChange] = []
     context: dict[str, str] = {}
     references: dict[str, dict[str, str]] = {}
@@ -156,4 +157,3 @@ async def default_generate(changes: ChangeSet, llm: LLMClient) -> list[FilePatch
         )
         patches.append(patch)
     return patches
-

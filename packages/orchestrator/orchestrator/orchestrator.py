@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import time
 from collections import defaultdict
+from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
@@ -14,7 +15,7 @@ from orchestrator.llm.doubao import create_doubao_client
 from orchestrator.memory.extract import extract_entities
 from orchestrator.memory.recall import recall
 from orchestrator.memory.store import persist_memory, read_all_memories
-from orchestrator.repo.conduit import create_conduit_repo
+from orchestrator.repo.conduit import ConduitRepo, create_conduit_repo
 from orchestrator.skills.registry import load_skills
 from orchestrator.types import ChangeSet, ClarifiedRequest, RunEvent, dataclass_to_json
 
@@ -41,6 +42,7 @@ class EventBus:
 bus = EventBus()
 pending_answers: dict[str, asyncio.Future[dict[str, str]]] = {}
 run_phase: dict[str, str] = {}
+run_repos: dict[str, ConduitRepo] = {}
 
 
 def emit_and_broadcast(run_id: str, event_type: str, payload: dict[str, Any]) -> RunEvent:
@@ -57,10 +59,11 @@ def _plan_payload_files(files) -> list[dict[str, Any]]:
     return [dataclass_to_json(f) for f in files]
 
 
-async def start_run(raw_text: str) -> str:
+async def start_run(raw_text: str, repo_url: str | None = None) -> str:
     run_id = str(uuid4())
     llm = create_doubao_client({"runId": run_id})
-    repo = create_conduit_repo()
+    repo = ConduitRepo.from_url(repo_url) if repo_url else create_conduit_repo()
+    run_repos[run_id] = repo
     asyncio.create_task(_run_pipeline(run_id, raw_text, llm, repo))
     return run_id
 
@@ -81,7 +84,16 @@ async def _wait_for_answers(run_id: str) -> dict[str, str]:
 
 async def _run_pipeline(run_id: str, raw_text: str, llm, repo) -> None:
     try:
-        emit_and_broadcast(run_id, "run.started", {"rawText": raw_text, "recallDisabled": False})
+        emit_and_broadcast(
+            run_id,
+            "run.started",
+            {
+                "rawText": raw_text,
+                "recallDisabled": False,
+                "repoPath": str(repo.repo_path),
+                "repoNwo": repo.upstream_nwo,
+            },
+        )
         run_phase[run_id] = "clarify"
         all_skills = await load_skills()
         aspect_union = list(dict.fromkeys(aspect for s in all_skills for aspect in s.possible_aspects))
@@ -90,7 +102,9 @@ async def _run_pipeline(run_id: str, raw_text: str, llm, repo) -> None:
         recall_matches_for_scan: list[dict[str, Any]] = []
         try:
             query_entities = await extract_entities(llm, run_id=run_id, summary=analysis_req.summary, skill_used="")
-            matches = recall(query_entities, read_all_memories(), top_k=3, min_score=0.3)
+            repo_nwo = run_repos.get(run_id, None)
+            repo_nwo_str = repo_nwo.upstream_nwo if repo_nwo else None
+            matches = recall(query_entities, read_all_memories(), top_k=3, min_score=0.3, repo_nwo=repo_nwo_str)
             if matches:
                 payload = [
                     {
@@ -209,18 +223,27 @@ async def _run_pipeline(run_id: str, raw_text: str, llm, repo) -> None:
         branch = f"feat/{req.fieldName}-{int(time.time() * 1000)}"
         repo.checkout_branch(branch)
         commit_msg = f"feat: add {req.fieldName} field\n\n{req.businessRule}"
-        repo.stage_and_commit(commit_msg)
+        repo.stage_and_commit(commit_msg, [p.path for p in patches])
+
+        run_phase[run_id] = "pr"
+        pr_title = f"feat: add {req.fieldName}"
+        pr_body = req.businessRule or commit_msg
+        repo.push_branch(branch)
+        pr_url = repo.create_pr(branch, pr_title, pr_body)
+
         emit_and_broadcast(
             run_id,
             "commit.done",
-            {"branch": branch, "commitMessage": commit_msg, "prDescription": f"feat: add {req.fieldName}\n\n{req.businessRule}", "patchCount": len(patches)},
+            {"branch": branch, "commitMessage": commit_msg, "prDescription": pr_body, "patchCount": len(patches), "prUrl": pr_url},
         )
         emit_and_broadcast(run_id, "run.completed", {"runId": run_id})
         run_phase.pop(run_id, None)
         try:
-            await persist_memory(run_id, llm)
+            _repo = run_repos.get(run_id)
+            await persist_memory(run_id, llm, repo_nwo=_repo.upstream_nwo if _repo else None)
         except Exception:
             pass
+        run_repos.pop(run_id, None)
     except Exception as e:
         emit_and_broadcast(run_id, "run.error", {"message": str(e)})
         run_phase.pop(run_id, None)
@@ -250,7 +273,13 @@ async def replay_from(run_id: str, from_event_index: int, new_raw_text: str) -> 
     event_store.truncate_after(run_id, from_event_index)
     emit_and_broadcast(run_id, "run.intervened", {"fromEventIndex": from_event_index, "newRawText": new_raw_text})
     llm = create_doubao_client({"runId": run_id})
-    repo = create_conduit_repo()
+    repo = run_repos.get(run_id)
+    if repo is None:
+        started = next((e for e in get_run_events(run_id) if e.type == "run.started"), None)
+        repo_path = ((started.payload or {}).get("repoPath") if started else None) if started else None
+        repo_nwo = ((started.payload or {}).get("repoNwo") if started else None) if started else None
+        repo = ConduitRepo(Path(repo_path), upstream_nwo=repo_nwo) if repo_path else create_conduit_repo()
+    run_repos[run_id] = repo
     asyncio.create_task(_run_pipeline(run_id, new_raw_text, llm, repo))
 
 

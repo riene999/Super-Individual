@@ -41,6 +41,7 @@ def _memory_from_dict(data: dict) -> RequestMemory:
         changedFiles=data.get("changedFiles", []),
         clarifications=[ClarificationQA(**c) for c in data.get("clarifications", [])],
         outcome=data.get("outcome", "failed"),
+        repoNwo=data.get("repoNwo"),
     )
 
 
@@ -115,7 +116,7 @@ def build_partial_from_events(run_id: str) -> dict | None:
     }
 
 
-async def persist_memory(run_id: str, llm: LLMClient) -> RequestMemory | None:
+async def persist_memory(run_id: str, llm: LLMClient, repo_nwo: str | None = None) -> RequestMemory | None:
     partial = build_partial_from_events(run_id)
     if not partial:
         return None
@@ -127,7 +128,7 @@ async def persist_memory(run_id: str, llm: LLMClient) -> RequestMemory | None:
         changed_files=partial["changedFiles"],
         clarifications=partial["clarifications"],
     )
-    mem = RequestMemory(**partial, entities=entities)
+    mem = RequestMemory(**partial, entities=entities, repoNwo=repo_nwo)
     upsert_memory(mem)
     return mem
 

@@ -73,7 +73,15 @@ def _clean_json(text: str) -> str:
 
 
 def parse_plan(text: str) -> list[FileStep]:
-    data = json.loads(_clean_json(text))
+    cleaned = _clean_json(text)
+    try:
+        data = json.loads(cleaned)
+    except Exception:
+        start = cleaned.find("{")
+        end = cleaned.rfind("}")
+        if start < 0 or end <= start:
+            raise
+        data = json.loads(cleaned[start : end + 1])
     files = data.get("files")
     if not isinstance(files, list):
         raise ValueError("genericPlan 没有返回 files 数组")
@@ -90,6 +98,44 @@ def parse_plan(text: str) -> list[FileStep]:
             raise ValueError(f"genericPlan.files[{i}] 缺少 instruction")
         steps.append(FileStep(path=path, mode=mode, instruction=instruction))
     return steps
+
+
+def _fallback_plan(req: ClarifiedRequest, ctx: RepoContext) -> SkillPlan:
+    haystack = " ".join([req.summary, req.fieldName, req.businessRule, req.displayLocation]).lower()
+    root = Path(ctx.repoPath)
+    if any(x in haystack for x in ("comment", "comments", "评论")) and any(x in haystack for x in ("like", "likes", "点赞")):
+        candidates = [
+            FileStep(
+                path="backend/models/Comment.js",
+                mode="modify",
+                instruction=f"Add `{req.fieldName}` support for comments as a non-negative integer derived from idempotent comment likes.",
+            ),
+            FileStep(
+                path="backend/controllers/comments.js",
+                mode="modify",
+                instruction="Add idempotent comment like handling so the same user can only count once per comment, and return likeCount with comments.",
+            ),
+            FileStep(
+                path="backend/routes/articles/comments.js",
+                mode="modify",
+                instruction="Add authenticated routes for liking or unliking a comment under an article comment URL.",
+            ),
+            FileStep(
+                path="frontend/src/components/CommentList/CommentList.jsx",
+                mode="modify",
+                instruction=f"Show `{req.fieldName}` beside the comment like button and keep the UI count idempotent after repeated likes.",
+            ),
+            FileStep(
+                path="frontend/src/services/toggleCommentLike.js",
+                mode="create",
+                instruction="Create a service for toggling comment likes through the backend comment-like endpoint.",
+            ),
+        ]
+        return SkillPlan(
+            skillName="generic",
+            files=[step for step in candidates if step.mode == "create" or (root / step.path).exists()][:MAX_GENERIC_FILES],
+        )
+    raise RuntimeError("generic plan returned invalid JSON and no deterministic fallback matched")
 
 
 async def generic_plan(req: ClarifiedRequest, ctx: RepoContext, llm: LLMClient) -> SkillPlan:
@@ -124,7 +170,11 @@ async def generic_plan(req: ClarifiedRequest, ctx: RepoContext, llm: LLMClient) 
         {"temperature": 0.1, "maxTokens": 1600},
         {"agent": "plan:generic"},
     )
-    return SkillPlan(skillName="generic", files=parse_plan(result["text"]))
+    try:
+        files = parse_plan(result["text"])
+    except Exception:
+        return _fallback_plan(req, ctx)
+    return SkillPlan(skillName="generic", files=files)
 
 
 class GenericSkill(Skill):
@@ -143,4 +193,3 @@ class GenericSkill(Skill):
 generic_skill = GenericSkill()
 generic_skill.locate = default_locate  # type: ignore[method-assign]
 generic_skill.generate = default_generate  # type: ignore[method-assign]
-

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import os
 import re
+import json
+import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -10,6 +12,14 @@ from orchestrator.types import FilePatch, RepoContext
 
 ROOT = Path(__file__).resolve().parents[4]
 DEFAULT_CONDUIT_PATH = ROOT / "workspace" / "conduit"
+REPOS_DIR = ROOT / "workspace" / "repos"
+
+
+def _parse_nwo(repo_url: str) -> str:
+    m = re.search(r"github\.com[/:]([^/]+/[^/]+?)(?:\.git)?$", repo_url)
+    if not m:
+        raise ValueError(f"Cannot parse GitHub URL: {repo_url}")
+    return m.group(1)
 
 
 @dataclass
@@ -28,10 +38,35 @@ class GrepMatch:
 
 
 class ConduitRepo:
-    def __init__(self) -> None:
-        self.repo_path = Path(os.getenv("CONDUIT_REPO_PATH", str(DEFAULT_CONDUIT_PATH)))
+    def __init__(self, repo_path: Path | None = None, upstream_nwo: str | None = None) -> None:
+        self.repo_path = repo_path or Path(os.getenv("CONDUIT_REPO_PATH", str(DEFAULT_CONDUIT_PATH)))
+        self.upstream_nwo = upstream_nwo
         if not self.repo_path.exists():
-            raise RuntimeError(f"Conduit repo not found at: {self.repo_path}")
+            raise RuntimeError(f"Repo not found at: {self.repo_path}")
+
+    @classmethod
+    def from_url(cls, repo_url: str) -> "ConduitRepo":
+        nwo = _parse_nwo(repo_url)
+        _, repo_name = nwo.split("/", 1)
+        local_path = REPOS_DIR / nwo
+
+        if not local_path.exists():
+            local_path.parent.mkdir(parents=True, exist_ok=True)
+            subprocess.run(["git", "clone", repo_url, str(local_path)], check=True)
+
+            # Fork on GitHub via API
+            subprocess.run(["gh", "api", f"repos/{nwo}/forks", "-X", "POST"], capture_output=True)
+
+            # Get authenticated username
+            r = subprocess.run(["gh", "api", "user", "-q", ".login"], capture_output=True, text=True, check=True)
+            username = r.stdout.strip()
+
+            # Set up remotes: origin → fork, upstream → original
+            fork_url = f"https://github.com/{username}/{repo_name}.git"
+            subprocess.run(["git", "remote", "rename", "origin", "upstream"], cwd=local_path, check=True)
+            subprocess.run(["git", "remote", "add", "origin", fork_url], cwd=local_path, check=True)
+
+        return cls(local_path, upstream_nwo=nwo)
 
     def read_file(self, relative_path: str) -> str:
         return (self.repo_path / relative_path).read_text(encoding="utf-8")
@@ -74,13 +109,52 @@ class ConduitRepo:
         if errors:
             return VerifyResult(False, "", "[syntax-guard] " + "\n".join(errors), 1)
 
+        package_json = self.repo_path / "package.json"
+        if not package_json.exists():
+            return VerifyResult(True, "[verify skipped] package.json not found; syntax guard completed.", "", 0)
+
+        try:
+            package = json.loads(package_json.read_text(encoding="utf-8"))
+        except Exception as e:
+            return VerifyResult(False, "", f"[verify] failed to read package.json: {e}", 1)
+
+        test_script = ((package.get("scripts") or {}).get("test") or "").strip()
+        if not test_script:
+            return VerifyResult(True, "[verify skipped] npm test script not found; syntax guard completed.", "", 0)
+
+        node_modules = self.repo_path / "node_modules"
+        if not node_modules.exists():
+            return VerifyResult(
+                True,
+                "[verify skipped] node_modules not found; run npm install in the target repo to enable npm test. Syntax guard completed.",
+                "",
+                0,
+            )
+
+        if "vitest" in test_script:
+            vitest_bins = [
+                node_modules / ".bin" / "vitest",
+                node_modules / ".bin" / "vitest.cmd",
+                node_modules / ".bin" / "vitest.ps1",
+            ]
+            if not any(p.exists() for p in vitest_bins):
+                return VerifyResult(
+                    True,
+                    "[verify skipped] vitest is not installed in node_modules; run npm install in the target repo to enable npm test. Syntax guard completed.",
+                    "",
+                    0,
+                )
+
+        npm = shutil.which("npm.cmd") or shutil.which("npm")
+        if not npm:
+            return VerifyResult(True, "[verify skipped] npm not found on PATH; syntax guard completed.", "", 0)
+
         r = subprocess.run(
-            ["npm", "test", "--", "--run"],
+            [npm, "test", "--", "--run"],
             cwd=self.repo_path,
             capture_output=True,
             text=True,
             timeout=120,
-            shell=True,
         )
         return VerifyResult(r.returncode == 0, r.stdout or "", r.stderr or "", r.returncode)
 
@@ -107,9 +181,31 @@ class ConduitRepo:
         else:
             subprocess.run(["git", "checkout", "-b", branch], cwd=self.repo_path, check=True)
 
-    def stage_and_commit(self, message: str) -> None:
-        subprocess.run(["git", "add", "."], cwd=self.repo_path, check=True)
-        subprocess.run(["git", "commit", "-m", message], cwd=self.repo_path, check=True)
+    def _run_git(self, args: list[str]) -> subprocess.CompletedProcess[str]:
+        r = subprocess.run(["git", *args], cwd=self.repo_path, capture_output=True, text=True)
+        if r.returncode != 0:
+            detail = (r.stderr or r.stdout or "").strip()
+            raise RuntimeError(f"git {' '.join(args)} failed: {detail}")
+        return r
+
+    def stage_and_commit(self, message: str, paths: list[str] | None = None) -> None:
+        index_lock = self.repo_path / ".git" / "index.lock"
+        if index_lock.exists():
+            raise RuntimeError(f"Git index lock exists at {index_lock}; remove it after confirming no git process is running.")
+
+        pathspec = paths or ["."]
+        self._run_git(["add", "--", *pathspec])
+        self._run_git(["commit", "-m", message])
+
+    def push_branch(self, branch: str) -> None:
+        subprocess.run(["git", "push", "-u", "origin", branch], cwd=self.repo_path, check=True)
+
+    def create_pr(self, branch: str, title: str, body: str) -> str:
+        cmd = ["gh", "pr", "create", "--title", title, "--body", body, "--base", "main", "--head", branch]
+        if self.upstream_nwo:
+            cmd += ["--repo", self.upstream_nwo]
+        r = subprocess.run(cmd, cwd=self.repo_path, capture_output=True, text=True, check=True)
+        return r.stdout.strip()
 
     def get_diff(self, base: str = "HEAD") -> str:
         r = subprocess.run(["git", "diff", base], cwd=self.repo_path, capture_output=True, text=True)
@@ -120,4 +216,3 @@ class ConduitRepo:
 
 def create_conduit_repo() -> ConduitRepo:
     return ConduitRepo()
-

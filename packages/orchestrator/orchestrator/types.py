@@ -109,6 +109,7 @@ class RequestMemory:
     outcome: Outcome
     mode: PlanMode = "skill"
     genericPlanFiles: list[str] | None = None
+    repoNwo: str | None = None
 
 
 @dataclass

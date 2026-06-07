@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 
 from orchestrator.agents.aspect_scan import AspectScanItem
 from orchestrator.llm.doubao import LLMClient
@@ -14,7 +15,32 @@ def _parse_json(text: str) -> dict:
         s = s.split("\n", 1)[1] if "\n" in s else s
         if s.endswith("```"):
             s = s[:-3]
-    return json.loads(s.strip())
+    cleaned = s.strip()
+    try:
+        return json.loads(cleaned)
+    except Exception:
+        start = cleaned.find("{")
+        end = cleaned.rfind("}")
+        if start >= 0 and end > start:
+            return json.loads(cleaned[start : end + 1])
+        raise
+
+
+def _fallback_analyze(raw_text: str) -> ClarifiedRequest:
+    field = "n/a"
+    match = re.search(r"\b([A-Za-z][A-Za-z0-9_]*(?:Count|Image|Url|URL|Id|ID)?)\b", raw_text)
+    if match:
+        field = match.group(1)
+    lowered = raw_text.lower()
+    field_type = "integer" if any(x in lowered for x in ("count", "次数", "数量", "点赞")) else "string"
+    return ClarifiedRequest(
+        summary=raw_text,
+        fieldName=field,
+        fieldType=field_type,
+        displayLocation=raw_text,
+        businessRule=raw_text,
+        clarifyingQuestions=[],
+    )
 
 
 async def analyze(raw_text: str, llm: LLMClient) -> ClarifiedRequest:
@@ -39,7 +65,10 @@ async def analyze(raw_text: str, llm: LLMClient) -> ClarifiedRequest:
         None,
         {"agent": "clarify:analyze"},
     )
-    data = _parse_json(result["text"])
+    try:
+        data = _parse_json(result["text"])
+    except Exception:
+        return _fallback_analyze(raw_text)
     return ClarifiedRequest(
         summary=str(data.get("summary", "")),
         fieldName=str(data.get("fieldName", "")),
@@ -60,7 +89,10 @@ async def resolve(raw_text: str, partial: ClarifiedRequest, answers: dict[str, s
         None,
         {"agent": "clarify:resolve"},
     )
-    data = _parse_json(result["text"])
+    try:
+        data = _parse_json(result["text"])
+    except Exception:
+        return ClarifiedRequest(**{**partial.__dict__, "answers": answers})
     return ClarifiedRequest(
         summary=str(data.get("summary", partial.summary)),
         fieldName=str(data.get("fieldName", partial.fieldName)),

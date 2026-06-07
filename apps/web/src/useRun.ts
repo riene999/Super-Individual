@@ -81,14 +81,14 @@ export function useRun() {
     });
   }, []);
 
-  const startRun = useCallback(async (text: string) => {
+  const startRun = useCallback(async (text: string, repoUrl?: string) => {
     esRef.current?.close();
     setState({ ...initial, phase: "starting", dismissedRunIds: new Set() });
 
     const res = await fetch(`${API}/runs`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ text, ...(repoUrl ? { repoUrl } : {}) }),
     });
     const { runId } = await res.json() as { runId: string };
 

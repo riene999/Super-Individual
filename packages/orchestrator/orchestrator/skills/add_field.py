@@ -1,7 +1,16 @@
 from __future__ import annotations
 
 from orchestrator.skills.base import Skill
-from orchestrator.types import FileStep
+from orchestrator.types import ClarifiedRequest, FileStep
+
+
+def _article_field_match(req: ClarifiedRequest, score: float) -> float:
+    haystack = " ".join([req.summary, req.fieldName, req.businessRule, req.displayLocation]).lower()
+    comment_markers = ("comment", "comments", "like", "likes", "点赞", "评论")
+    article_markers = ("article", "articles", "文章")
+    if any(marker in haystack for marker in comment_markers) and not any(marker in haystack for marker in article_markers):
+        return 0.0
+    return score
 
 
 add_field = Skill(
@@ -21,6 +30,7 @@ add_field = Skill(
         "field", "add", "show", "display", "read", "time", "count", "word",
     ],
     match_threshold=4,
+    custom_match=_article_field_match,
     build_steps=lambda req, _ctx: [
         FileStep(
             path="backend/models/Article.js",
@@ -39,4 +49,3 @@ add_field = Skill(
         ),
     ],
 )
-
