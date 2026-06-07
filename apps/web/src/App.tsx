@@ -123,6 +123,14 @@ export default function App() {
             </div>
           </div>
 
+          <ReplayBar
+            events={state.events}
+            onReplay={(idx, newText) => {
+              setRunning(true);
+              replayFrom(idx, newText || text);
+            }}
+          />
+
           {state.recallMatches.length > 0 && (
             <RecallCard
               matches={state.recallMatches}
@@ -159,15 +167,6 @@ export default function App() {
             )}
           </div>
 
-          {(state.done || state.error) && state.events.length > 0 && (
-            <ReplayBar
-              events={state.events}
-              onReplay={(idx, newText) => {
-                setRunning(true);
-                replayFrom(idx, newText || text);
-              }}
-            />
-          )}
         </section>
 
         <aside className="sidebar-col">

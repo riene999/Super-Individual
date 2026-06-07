@@ -757,9 +757,11 @@ code,
 }
 
 .replay-bar {
-  margin-top: 20px;
-  padding-top: 14px;
-  border-top: 0.5px solid var(--border);
+  margin: -4px 0 16px;
+  padding: 10px 12px;
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
   display: flex;
   gap: 8px;
   align-items: center;
@@ -767,8 +769,13 @@ code,
 }
 
 .replay-bar > i,
-.replay-bar .label {
+.replay-bar .label,
+.replay-empty {
   color: var(--text-tertiary);
+}
+
+.replay-empty {
+  min-width: 120px;
 }
 
 .replay-bar select,
@@ -795,6 +802,10 @@ code,
   padding: 5px 14px;
   font-size: 12px;
   font-weight: 500;
+}
+
+.replay-bar.empty input {
+  color: var(--text-tertiary);
 }
 
 .sidebar-card {
