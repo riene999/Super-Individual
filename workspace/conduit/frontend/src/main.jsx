@@ -14,6 +14,7 @@ import HomeArticles from "./routes/HomeArticles";
 import Login from "./routes/Login";
 import NotFound from "./routes/NotFound";
 import Profile from "./routes/Profile/Profile";
+import ProfileAboutMe from "./routes/Profile/ProfileAboutMe";
 import ProfileArticles from "./routes/Profile/ProfileArticles";
 import ProfileFavArticles from "./routes/Profile/ProfileFavArticles";
 import Settings from "./routes/Settings";
@@ -43,7 +44,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             </Route>
 
             <Route path="profile/:username" element={<Profile />}>
-              <Route index element={<ProfileArticles />} />
+              <Route index element={<ProfileAboutMe />} />
+              <Route path="my-articles" element={<ProfileArticles />} />
               <Route path="favorites" element={<ProfileFavArticles />} />
             </Route>
           </Route>
@@ -52,7 +54,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       </AuthProvider>
     </HashRouter>
   </React.StrictMode>,
-  );
+);
 
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))

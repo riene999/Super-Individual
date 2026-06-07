@@ -18,6 +18,7 @@ function Profile() {
         <div className="col-xs-12 col-md-10 offset-md-1">
           <div className="articles-toggle">
             <ul className="nav nav-pills outline-active">
+              <NavItem text="About Me" url="about" state={state} />
               <NavItem text="My Articles" url="" state={state} />
               <NavItem text="Favorited Articles" url="favorites" state={state} />
             </ul>
