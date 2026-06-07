@@ -1,0 +1,8 @@
+.env
+.env.local
+node_modules/
+dist/
+apps/*/dist/
+packages/*/dist/
+events/
+*.jsonl
