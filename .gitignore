@@ -6,3 +6,7 @@ apps/*/dist/
 packages/*/dist/
 events/
 *.jsonl
+__pycache__/
+*.pyc
+*.pyc.*
+.venv/

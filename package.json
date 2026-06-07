@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "pnpm --parallel -r dev",
+    "dev:py-api": "cd apps/api_py && uv run uvicorn app.main:app --host 0.0.0.0 --port 3001 --reload",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "test:skills": "pnpm --filter @super-individual/orchestrator exec tsx ../../e2e/test-skills-deterministic.ts",
