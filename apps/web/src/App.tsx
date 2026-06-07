@@ -9,8 +9,11 @@ import RunMetricsCard from "./RunMetricsCard.js";
 import MetricsPanel from "./MetricsPanel.js";
 import RecallCard from "./RecallCard.js";
 import RepoPanel from "./RepoPanel.js";
+import RunHistoryPanel from "./RunHistoryPanel.js";
 import { computePrefill } from "./recallTypes.js";
 import type { PrefillState } from "./recallTypes.js";
+import { useRecentRuns } from "./useRecentRuns.js";
+import type { RecentRun } from "./useRecentRuns.js";
 
 const DEMO_PROMPT = "我想在每篇文章卡片上看到大概要读几分钟";
 
@@ -25,9 +28,11 @@ export default function App() {
   const feedRef = useRef<HTMLDivElement>(null);
   const [running, setRunning] = useState(false);
   const [metricsSignal, setMetricsSignal] = useState(0);
+  const [activityTab, setActivityTab] = useState<"events" | "history">("events");
 
   const { data: runMetrics } = useRunMetrics(state.runId, metricsSignal);
   const { data: globalMetrics, loading: globalLoading, refresh: refreshGlobalMetrics } = useGlobalMetrics(metricsSignal);
+  const { runs: recentRuns, loading: recentRunsLoading, deleteRunHistory } = useRecentRuns(metricsSignal, 20);
 
   useEffect(() => {
     feedRef.current?.scrollTo({ top: feedRef.current.scrollHeight, behavior: "smooth" });
@@ -53,6 +58,12 @@ export default function App() {
     if (!text.trim() || !repoReady) return;
     setRunning(true);
     await startRun(text.trim(), repoState.repoUrl);
+  };
+
+  const handleDeleteRunHistory = async (run: RecentRun) => {
+    const ok = window.confirm("删除这条 run 历史？这不会删除 memory，也不会回滚代码改动。");
+    if (!ok) return;
+    await deleteRunHistory(run.runId);
   };
 
   useEffect(() => {
@@ -147,23 +158,37 @@ export default function App() {
             />
           )}
 
-          <div className="event-stream" ref={feedRef}>
-            {state.events
-              .filter((ev) => ev.type !== "recall.matched")
-              .map((ev, i) => (
-                <EventCard key={`${ev.ts}-${i}`} event={ev} index={i} />
-              ))}
-            {state.error && (
-              <div className="event event-error">
-                <div className="event-icon danger"><i className="ti ti-circle-x" aria-hidden="true" /></div>
-                <div className="event-body">
-                  <div className="event-head">
-                    <span className="event-title">Run error</span>
-                    <span className="event-meta">SSE</span>
+          <div className="activity-panel">
+            <div className="activity-tabs">
+              <button className={activityTab === "events" ? "active" : ""} onClick={() => setActivityTab("events")}>事件流</button>
+              <button className={activityTab === "history" ? "active" : ""} onClick={() => setActivityTab("history")}>对话历史</button>
+            </div>
+
+            {activityTab === "events" ? (
+              <div className="event-stream" ref={feedRef}>
+                {state.events.filter((ev) => ev.type !== "recall.matched").length === 0 && !state.error && (
+                  <div className="activity-empty">运行阶段信息会显示在这里</div>
+                )}
+                {state.events
+                  .filter((ev) => ev.type !== "recall.matched")
+                  .map((ev, i) => (
+                    <EventCard key={`${ev.ts}-${i}`} event={ev} index={i} />
+                  ))}
+                {state.error && (
+                  <div className="event event-error">
+                    <div className="event-icon danger"><i className="ti ti-circle-x" aria-hidden="true" /></div>
+                    <div className="event-body">
+                      <div className="event-head">
+                        <span className="event-title">Run error</span>
+                        <span className="event-meta">SSE</span>
+                      </div>
+                      <pre className="event-desc">{state.error}</pre>
+                    </div>
                   </div>
-                  <pre className="event-desc">{state.error}</pre>
-                </div>
+                )}
               </div>
+            ) : (
+              <RunHistoryPanel runs={recentRuns} loading={recentRunsLoading} onDelete={handleDeleteRunHistory} />
             )}
           </div>
 

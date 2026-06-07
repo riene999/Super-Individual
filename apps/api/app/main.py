@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+from orchestrator.events import store as event_store
 from orchestrator.metrics.aggregator import aggregate_global, aggregate_run, compare_runs
 from orchestrator.repo.conduit import ConduitRepo, REPOS_DIR
 from orchestrator.orchestrator import (
@@ -16,6 +17,7 @@ from orchestrator.orchestrator import (
     dismiss_recall,
     get_run_events,
     get_run_phase,
+    is_run_active,
     provide_clarification_answers,
     replay_from,
     resume_run,
@@ -118,12 +120,27 @@ async def run_stream(run_id: str):
     return StreamingResponse(gen(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "Connection": "keep-alive"})
 
 
+@app.get("/api/runs/recent")
+async def recent_runs(limit: int = 20):
+    return {"runs": event_store.list_recent_runs(limit)}
+
+
 @app.get("/api/runs/{run_id}")
 async def run_detail(run_id: str):
     events = get_run_events(run_id)
     if not events:
         raise HTTPException(status_code=404, detail=err("run not found"))
     return {"runId": run_id, "phase": get_run_phase(run_id) or "done", "events": [event_to_dict(e) for e in events]}
+
+
+@app.delete("/api/runs/{run_id}")
+async def delete_run(run_id: str):
+    if is_run_active(run_id):
+        raise HTTPException(status_code=409, detail=err("cannot delete an active run"))
+    ok = event_store.delete_run_events(run_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail=err("run not found"))
+    return {"ok": True}
 
 
 @app.post("/api/runs/{run_id}/dismiss-recall")

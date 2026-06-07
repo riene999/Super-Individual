@@ -91,6 +91,11 @@ def stop_run(run_id: str) -> bool:
     return True
 
 
+def is_run_active(run_id: str) -> bool:
+    task = run_tasks.get(run_id)
+    return bool(task and not task.done())
+
+
 async def _wait_for_answers(run_id: str) -> dict[str, str]:
     fut: asyncio.Future[dict[str, str]] = asyncio.get_running_loop().create_future()
     pending_answers[run_id] = fut
