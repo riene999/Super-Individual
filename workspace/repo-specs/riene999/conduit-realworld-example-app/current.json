@@ -1,0 +1,3136 @@
+{
+  "version": 1,
+  "repoNwo": "riene999/conduit-realworld-example-app",
+  "repoPath": "D:\\Code\\super-individual\\workspace\\repos\\riene999\\conduit-realworld-example-app",
+  "branch": "main",
+  "updatedAt": 1780850778923,
+  "files": {
+    "CODE_OF_CONDUCT.md": {
+      "path": "CODE_OF_CONDUCT.md",
+      "hash": "658c0526b014a4e6e25d05c0ee6cfe035b638ef032ecbd59c6f782004e7c2009",
+      "bytes": 5361,
+      "summary": "本文件为社区贡献者行为准则，明确正负向行为标准、适用范围、举报渠道及四级违规处置规则，维护友好包容社区环境",
+      "tags": [
+        "code of conduct",
+        "社区规范",
+        "贡献者公约",
+        "反骚扰",
+        "开源社区",
+        "社区治理",
+        "行为指引"
+      ],
+      "symbols": [],
+      "imports": [],
+      "updatedAt": 1780849410920
+    },
+    "README.md": {
+      "path": "README.md",
+      "hash": "eae49f05002f4e8e9032609565811aa5ab69eac88a0018e2d679bf0631fa0365",
+      "bytes": 4577,
+      "summary": "该文档为React+Express+Sequelize全栈RealWorld示例项目说明，涵盖环境要求、安装配置、运行测试等操作指引",
+      "tags": [
+        "readme",
+        "fullstack",
+        "react",
+        "vite",
+        "express",
+        "sequelize",
+        "postgresql",
+        "项目文档"
+      ],
+      "symbols": [],
+      "imports": [],
+      "updatedAt": 1780849412771
+    },
+    "backend/config/config.js": {
+      "path": "backend/config/config.js",
+      "hash": "a257c0dfbde65dc65f66a7e9d4abc9e836cb77f9cc390243fb72186d736a668c",
+      "bytes": 900,
+      "summary": "该文件是Sequelize多环境数据库配置，分别定义开发、测试、生产环境的DB连接参数，所有配置均从环境变量读取",
+      "tags": [
+        "sequelize",
+        "数据库配置",
+        "多环境",
+        "环境变量",
+        "nodejs",
+        "后端配置"
+      ],
+      "symbols": [
+        "development",
+        "test",
+        "production"
+      ],
+      "imports": [],
+      "updatedAt": 1780849411865
+    },
+    "backend/controllers/articles.js": {
+      "path": "backend/controllers/articles.js",
+      "hash": "a0ef6cf53cb344ba044d01bfd21d342052e75114e987682517a7e6e5c78b14d3",
+      "bytes": 7613,
+      "summary": "该文件是后端文章控制器，封装文章列表查询、草稿管理、增删改查、关注流等核心业务接口逻辑",
+      "tags": [
+        "article controller",
+        "backend",
+        "crud",
+        "sequelize",
+        "rest api",
+        "content management"
+      ],
+      "symbols": [
+        "allArticles",
+        "myDrafts",
+        "createArticle",
+        "articlesFeed",
+        "singleArticle",
+        "updateArticle",
+        "deleteArticle"
+      ],
+      "imports": [
+        "} = require(\"../helper/customErrors\");",
+        "} = require(\"../helper/helpers\");",
+        "const { Article, Tag, User } = require(\"../models\");"
+      ],
+      "updatedAt": 1780850776046
+    },
+    "backend/controllers/comments.js": {
+      "path": "backend/controllers/comments.js",
+      "hash": "4ff577f25b414e79bbd436cab2539847160a0e6b9ed88002e5489898c8201d2d",
+      "bytes": 2345,
+      "summary": "该文件为后端评论控制器，实现指定文章的评论列表查询、新建、删除接口逻辑，包含权限校验与关联数据处理",
+      "tags": [
+        "comment controller",
+        "后端接口",
+        "文章评论",
+        "权限校验",
+        "sequelize",
+        "业务逻辑"
+      ],
+      "symbols": [
+        "allComments",
+        "createComment",
+        "deleteComment"
+      ],
+      "imports": [
+        "} = require(\"../helper/customErrors\");",
+        "const { appendFollowers } = require(\"../helper/helpers\");",
+        "const { Article, Comment, User } = require(\"../models\");"
+      ],
+      "updatedAt": 1780850540665
+    },
+    "backend/controllers/favorites.js": {
+      "path": "backend/controllers/favorites.js",
+      "hash": "b4371809aec5187201bfd2c9d8430a9db37b9b52506ada416a9f18205ddab67d",
+      "bytes": 1280,
+      "summary": "后端文章收藏控制器，实现点赞/取消点赞切换逻辑，校验登录权限后处理关联数据返回格式化文章信息",
+      "tags": [
+        "backend",
+        "controller",
+        "favorites",
+        "article",
+        "permission check",
+        "sequelize"
+      ],
+      "symbols": [
+        "favoriteToggler"
+      ],
+      "imports": [
+        "const { UnauthorizedError, NotFoundError } = require(\"../helper/customErrors\");",
+        "} = require(\"../helper/helpers\");",
+        "const { Article, Tag, User } = require(\"../models\");"
+      ],
+      "updatedAt": 1780849410127
+    },
+    "backend/controllers/profiles.js": {
+      "path": "backend/controllers/profiles.js",
+      "hash": "b1d2ec9c77304283af495feb32921e442acbb77948887f8af329f0404109e8fb",
+      "bytes": 1414,
+      "summary": "该文件是后端用户资料控制器，实现获取公开用户资料、关注/取消关注用户逻辑，处理对应权限与资源不存在异常",
+      "tags": [
+        "profile controller",
+        "user follow",
+        "express",
+        "sequelize",
+        "backend",
+        "error handling"
+      ],
+      "symbols": [
+        "getProfile",
+        "followToggler"
+      ],
+      "imports": [
+        "const { UnauthorizedError, NotFoundError } = require(\"../helper/customErrors\");",
+        "const { appendFollowers } = require(\"../helper/helpers\");",
+        "const { User } = require(\"../models\");"
+      ],
+      "updatedAt": 1780849409529
+    },
+    "backend/controllers/user.js": {
+      "path": "backend/controllers/user.js",
+      "hash": "ac161f81188104587d0761d4c6e25866e4f39259ce87028b6db24d0ce168855e",
+      "bytes": 1155,
+      "summary": "该文件为用户控制器，校验登录权限后提供获取当前用户、更新用户信息（含密码哈希加密）的接口逻辑",
+      "tags": [
+        "nodejs",
+        "express",
+        "用户控制器",
+        "权限校验",
+        "密码加密",
+        "用户管理"
+      ],
+      "symbols": [
+        "currentUser",
+        "updateUser"
+      ],
+      "imports": [
+        "const { UnauthorizedError } = require(\"../helper/customErrors\");",
+        "const { bcryptHash } = require(\"../helper/bcrypt\");"
+      ],
+      "updatedAt": 1780849409948
+    },
+    "backend/controllers/users.js": {
+      "path": "backend/controllers/users.js",
+      "hash": "89a2a30be16713334d1c965551e7c3eabb18481dffd296e816e34cfd93cbde49",
+      "bytes": 1727,
+      "summary": "该文件为后端用户控制器，实现注册、登录认证逻辑，完成参数校验、密码加密、JWT签发，统一透传错误到全局错误中间件",
+      "tags": [
+        "user controller",
+        "auth",
+        "jwt",
+        "bcrypt",
+        "用户认证",
+        "后端接口",
+        "密码加密"
+      ],
+      "symbols": [
+        "signUp",
+        "signIn"
+      ],
+      "imports": [
+        "const { User } = require(\"../models\");",
+        "const { jwtSign } = require(\"../helper/jwt\");",
+        "const { bcryptHash, bcryptCompare } = require(\"../helper/bcrypt\");",
+        "} = require(\"../helper/customErrors\");"
+      ],
+      "updatedAt": 1780849418387
+    },
+    "backend/helper/bcrypt.js": {
+      "path": "backend/helper/bcrypt.js",
+      "hash": "a26e965625fa03970dbe0e121544da046deb5780347a744657353f6c533172b0",
+      "bytes": 241,
+      "summary": "封装bcrypt加密工具，提供异步密码哈希生成、明文与哈希密码比对方法，用于后端密码安全处理",
+      "tags": [
+        "bcrypt",
+        "密码加密",
+        "工具函数",
+        "后端辅助",
+        "密码校验"
+      ],
+      "symbols": [
+        "bcryptHash",
+        "bcryptCompare"
+      ],
+      "imports": [
+        "const bcrypt = require(\"bcrypt\");"
+      ],
+      "updatedAt": 1780849415817
+    },
+    "backend/helper/customErrors.js": {
+      "path": "backend/helper/customErrors.js",
+      "hash": "8bcbbf8ae0386d09798055368823ca0bd974eafe91a5c2ff032706ecfc0a8ecf",
+      "bytes": 978,
+      "summary": "该文件封装后端常用的各类自定义业务错误，基于基础错误类扩展，统一导出供业务层抛出使用",
+      "tags": [
+        "自定义错误",
+        "异常处理",
+        "后端工具",
+        "javascript",
+        "错误封装"
+      ],
+      "symbols": [
+        "ForbiddenError",
+        "NotFoundError",
+        "UnauthorizedError",
+        "ValidationError",
+        "FieldRequiredError",
+        "AlreadyTakenError"
+      ],
+      "imports": [],
+      "updatedAt": 1780849416640
+    },
+    "backend/helper/helpers.js": {
+      "path": "backend/helper/helpers.js",
+      "hash": "5898ac7d1ba12487447f7b77a0431d83b2cf2aa2334621f742a80fa3eaa73deb",
+      "bytes": 1427,
+      "summary": "后端通用辅助工具集，提供字符串转slug、文章标签、收藏、关注关联数据追加的公共处理方法",
+      "tags": [
+        "backend",
+        "helper",
+        "工具函数",
+        "字符串处理",
+        "数据追加",
+        "关联查询",
+        "业务辅助"
+      ],
+      "symbols": [
+        "slugify",
+        "appendTagList",
+        "appendFavorites",
+        "appendFollowers"
+      ],
+      "imports": [],
+      "updatedAt": 1780849416713
+    },
+    "backend/helper/helpers.test.js": {
+      "path": "backend/helper/helpers.test.js",
+      "hash": "958816637b5c57a13f8db5b003893eab66b5d27c12b04f499248cb3c7f306a3a",
+      "bytes": 347,
+      "summary": "该文件是后端helper工具的Jest单元测试，校验slugify函数对多类输入是否正确生成标准小写连字符格式的slug",
+      "tags": [
+        "jest",
+        "单元测试",
+        "slugify",
+        "工具函数测试",
+        "backend helper"
+      ],
+      "symbols": [
+        "slugify"
+      ],
+      "imports": [
+        "const { slugify } = require(\"./helpers\");"
+      ],
+      "updatedAt": 1780849419418
+    },
+    "backend/helper/jwt.js": {
+      "path": "backend/helper/jwt.js",
+      "hash": "6be11a99d937daa21cbfbccb2aa57058571b2fc9606f67fbc60556a92ec6cd19",
+      "bytes": 328,
+      "summary": "后端JWT辅助工具，读取环境变量密钥，封装JWT令牌签发、令牌合法性校验两个核心方法。",
+      "tags": [
+        "jwt",
+        "身份认证",
+        "工具函数",
+        "令牌校验",
+        "nodejs"
+      ],
+      "symbols": [
+        "jwtSign",
+        "jwtVerify"
+      ],
+      "imports": [
+        "const jwt = require(\"jsonwebtoken\");"
+      ],
+      "updatedAt": 1780849416443
+    },
+    "backend/index.js": {
+      "path": "backend/index.js",
+      "hash": "c761a0b651bea95c953308757561b20e8d40bf0e9f7582ad77d04286166b620d",
+      "bytes": 1452,
+      "summary": "作为Express后端服务入口，加载环境变量、注册中间件与各API路由，同步数据库后启动服务",
+      "tags": [
+        "express",
+        "nodejs",
+        "后端入口",
+        "sequelize",
+        "api路由",
+        "cors"
+      ],
+      "symbols": [
+        "app",
+        "PORT",
+        "sequelize",
+        "errorHandler",
+        "usersRoutes",
+        "articlesRoutes"
+      ],
+      "imports": [
+        "require(\"dotenv\").config();",
+        "const express = require(\"express\");",
+        "const cors = require(\"cors\");",
+        "const { sequelize } = require(\"./models\");",
+        "const errorHandler = require(\"./middleware/errorHandler\");",
+        "const usersRoutes = require(\"./routes/users\");",
+        "const userRoutes = require(\"./routes/user\");",
+        "const articlesRoutes = require(\"./routes/articles\");"
+      ],
+      "updatedAt": 1780849418621
+    },
+    "backend/middleware/authentication.js": {
+      "path": "backend/middleware/authentication.js",
+      "hash": "1eafe0970f6478151e474af76547ad8d425995375787e538c51337dec4f9efc3",
+      "bytes": 915,
+      "summary": "作为后端认证中间件，校验请求头JWT令牌有效性，解析关联用户挂载到请求对象，异常透传后续错误处理",
+      "tags": [
+        "authentication",
+        "jwt",
+        "middleware",
+        "nodejs",
+        "用户校验",
+        "权限拦截"
+      ],
+      "symbols": [
+        "verifyToken"
+      ],
+      "imports": [
+        "const { NotFoundError } = require(\"../helper/customErrors\");",
+        "const { jwtVerify } = require(\"../helper/jwt\");",
+        "const { User } = require(\"../models\");"
+      ],
+      "updatedAt": 1780849421387
+    },
+    "backend/middleware/errorHandler.js": {
+      "path": "backend/middleware/errorHandler.js",
+      "hash": "59cae4a2d9f693ac727e575f2fc6bcbe5d438d52bc1003adc9a50fa46c81adf5",
+      "bytes": 1215,
+      "summary": "Express全局错误处理中间件，识别不同自定义错误类型，返回对应HTTP状态码的标准化错误响应，同时打印彩色错误日志",
+      "tags": [
+        "express",
+        "错误处理",
+        "中间件",
+        "http状态码",
+        "自定义错误",
+        "日志输出"
+      ],
+      "symbols": [
+        "errorHandler"
+      ],
+      "imports": [
+        "} = require(\"../helper/customErrors\");"
+      ],
+      "updatedAt": 1780849422096
+    },
+    "backend/migrations/20220129140530-create-tag.js": {
+      "path": "backend/migrations/20220129140530-create-tag.js",
+      "hash": "0669b4e76a5b5273f734c2d3c758e8082ba0ac8f85cd3616c980ec30a8e97129",
+      "bytes": 349,
+      "summary": "该Sequelize数据库迁移文件，up方法创建以name为主键的Tags标签表，down方法回滚删除该表",
+      "tags": [
+        "sequelize",
+        "数据库迁移",
+        "标签表",
+        "表创建",
+        "回滚逻辑"
+      ],
+      "symbols": [
+        "up",
+        "down"
+      ],
+      "imports": [],
+      "updatedAt": 1780849422789
+    },
+    "backend/migrations/20220129140808-create-article.js": {
+      "path": "backend/migrations/20220129140808-create-article.js",
+      "hash": "a023eb1231a7714bec68c7e9841dcab73a05ab1ab0bf1ad40b0d4291fd1c0b2d",
+      "bytes": 798,
+      "summary": "这是Sequelize数据库迁移文件，up方法创建Articles文章表并定义字段，down方法执行删表回滚操作",
+      "tags": [
+        "sequelize",
+        "migration",
+        "数据库迁移",
+        "文章表",
+        "backend",
+        "orm"
+      ],
+      "symbols": [
+        "up",
+        "down"
+      ],
+      "imports": [],
+      "updatedAt": 1780849425515
+    },
+    "backend/migrations/20220129140956-create-user.js": {
+      "path": "backend/migrations/20220129140956-create-user.js",
+      "hash": "9ef19db9fd2f604c61b28bacc2bbca2ce88cd9a283de0bdac009081d5bde2838",
+      "bytes": 909,
+      "summary": "这是Sequelize用户表数据库迁移文件，up方法创建含8个字段的Users表，down方法回滚时删除该表",
+      "tags": [
+        "sequelize",
+        "migration",
+        "数据库迁移",
+        "user表",
+        "backend",
+        "orm"
+      ],
+      "symbols": [
+        "up",
+        "down"
+      ],
+      "imports": [],
+      "updatedAt": 1780849423707
+    },
+    "backend/migrations/20220129141319-create-comment.js": {
+      "path": "backend/migrations/20220129141319-create-comment.js",
+      "hash": "c454d000823cc7648e0bc66075e310adc1b3798d6b46b0590ba92bcf82a4bc6a",
+      "bytes": 610,
+      "summary": "Sequelize数据库迁移文件，up方法创建含id、body、时间字段的Comments评论表，down方法回滚删除该表。",
+      "tags": [
+        "sequelize",
+        "migration",
+        "数据库迁移",
+        "评论表",
+        "表结构定义",
+        "nodejs"
+      ],
+      "symbols": [
+        "up",
+        "down"
+      ],
+      "imports": [],
+      "updatedAt": 1780849423344
+    },
+    "backend/models/Article.js": {
+      "path": "backend/models/Article.js",
+      "hash": "f7412fece8d5e1b85f624c112b18de283fbb9203baa9d0c40b673ffda40fde93",
+      "bytes": 1621,
+      "summary": "基于Sequelize实现文章数据模型，定义字段属性，关联用户、标签、评论，重写序列化隐藏内部字段",
+      "tags": [
+        "sequelize",
+        "文章模型",
+        "orm",
+        "数据层",
+        "关联定义",
+        "后端"
+      ],
+      "symbols": [
+        "Article",
+        "associate",
+        "toJSON"
+      ],
+      "imports": [
+        "const { Model } = require(\"sequelize\");"
+      ],
+      "updatedAt": 1780850776753
+    },
+    "backend/models/Comment.js": {
+      "path": "backend/models/Comment.js",
+      "hash": "dfa2ccb30834ba8d14dc619805462bac4b4bc3a96f93ec284455dcb898468efa",
+      "bytes": 996,
+      "summary": "该文件是Sequelize评论数据模型，定义id、body字段，关联所属文章与作者，序列化时隐藏外键字段",
+      "tags": [
+        "sequelize",
+        "orm",
+        "comment",
+        "数据模型",
+        "后端",
+        "关联定义"
+      ],
+      "symbols": [
+        "Comment",
+        "associate",
+        "toJSON"
+      ],
+      "imports": [
+        "const { Model } = require(\"sequelize\");"
+      ],
+      "updatedAt": 1780850541839
+    },
+    "backend/models/Tag.js": {
+      "path": "backend/models/Tag.js",
+      "hash": "e2e7c956971ffb49ea4bc187efe44251c52e4c774226d9239d9deca73f9d14d2",
+      "bytes": 971,
+      "summary": "定义Sequelize的Tag标签数据模型，以name为主键，和文章多对多关联，序列化时隐藏指定字段，关闭时间戳",
+      "tags": [
+        "sequelize",
+        "数据模型",
+        "标签",
+        "orm",
+        "后端"
+      ],
+      "symbols": [
+        "Tag",
+        "associate",
+        "toJSON"
+      ],
+      "imports": [
+        "const { Model } = require(\"sequelize\");"
+      ],
+      "updatedAt": 1780849430899
+    },
+    "backend/models/User.js": {
+      "path": "backend/models/User.js",
+      "hash": "b1a356587c7879068d0ca8502a2f8ac64592e5af1e2884f837f14148b3c0e401",
+      "bytes": 1601,
+      "summary": "基于Sequelize定义用户数据模型，声明用户字段、各类关联关系，序列化时隐藏敏感冗余字段",
+      "tags": [
+        "sequelize",
+        "user模型",
+        "后端",
+        "数据模型",
+        "关联关系",
+        "字段脱敏"
+      ],
+      "symbols": [
+        "User",
+        "associate",
+        "toJSON"
+      ],
+      "imports": [
+        "const { Model } = require(\"sequelize\");"
+      ],
+      "updatedAt": 1780849430827
+    },
+    "backend/models/index.js": {
+      "path": "backend/models/index.js",
+      "hash": "6b87e137e4657a27a2051c9112ad1499dd6b0301c9c733aa4c24bcdeb0010cf0",
+      "bytes": 938,
+      "summary": "作为Sequelize ORM模型聚合入口，自动扫描加载同目录所有模型，初始化数据库连接，挂载关联关系后导出db实例",
+      "tags": [
+        "sequelize",
+        "orm",
+        "数据库模型",
+        "自动加载",
+        "nodejs",
+        "后端"
+      ],
+      "symbols": [
+        "db",
+        "sequelize",
+        "Sequelize"
+      ],
+      "imports": [
+        "const fs = require(\"fs\");",
+        "const path = require(\"path\");",
+        "const Sequelize = require(\"sequelize\");",
+        "const config = require(__dirname + \"/../config/config.js\")[env];",
+        "const model = require(path.join(__dirname, file))("
+      ],
+      "updatedAt": 1780849429819
+    },
+    "backend/package.json": {
+      "path": "backend/package.json",
+      "hash": "70fb34a31656904a10e7b2aff24cdb64cbc745de6b1e4bd25c971a441e1a86fd",
+      "bytes": 493,
+      "summary": "该文件是后端Node.js项目的包配置文件，定义运行脚本、生产与开发依赖，采用Express+Sequelize+PostgreSQL技术栈",
+      "tags": [
+        "package.json",
+        "nodejs",
+        "express",
+        "sequelize",
+        "postgresql",
+        "后端配置",
+        "jwt",
+        "bcrypt"
+      ],
+      "symbols": [
+        "dev",
+        "sqlz",
+        "start",
+        "index.js"
+      ],
+      "imports": [],
+      "updatedAt": 1780849431538
+    },
+    "backend/routes/articles.js": {
+      "path": "backend/routes/articles.js",
+      "hash": "dfd968265a6878dd2dd483916001c23ca14263ce43abafb3e142c7161e778aeb",
+      "bytes": 996,
+      "summary": "该文件为Express文章业务路由，所有接口前置Token校验，定义文章CRUD、Feed接口，挂载收藏、评论子路由",
+      "tags": [
+        "express",
+        "router",
+        "articles",
+        "restful api",
+        "jwt auth",
+        "backend"
+      ],
+      "symbols": [
+        "router",
+        "allArticles",
+        "createArticle",
+        "singleArticle",
+        "updateArticle",
+        "deleteArticle",
+        "articlesFeed"
+      ],
+      "imports": [
+        "const express = require(\"express\");",
+        "const verifyToken = require(\"../middleware/authentication\");",
+        "} = require(\"../controllers/articles\");",
+        "const favoritesRoutes = require(\"./articles/favorites\");",
+        "const commentsRoutes = require(\"./articles/comments\");"
+      ],
+      "updatedAt": 1780850542004
+    },
+    "backend/routes/articles/comments.js": {
+      "path": "backend/routes/articles/comments.js",
+      "hash": "23216a95913acd099f630f0488b111325b65b08071d013dee33dc33770967850",
+      "bytes": 558,
+      "summary": "该文件为Express后端文章评论路由模块，挂载3个带Token鉴权的接口，分发文章评论的查询、创建、删除请求",
+      "tags": [
+        "express",
+        "router",
+        "评论接口",
+        "身份鉴权",
+        "restful",
+        "文章模块",
+        "后端路由"
+      ],
+      "symbols": [
+        "router",
+        "verifyToken",
+        "allComments",
+        "createComment",
+        "deleteComment"
+      ],
+      "imports": [
+        "const express = require(\"express\");",
+        "const verifyToken = require(\"../../middleware/authentication\");",
+        "} = require(\"../../controllers/comments\");"
+      ],
+      "updatedAt": 1780849432506
+    },
+    "backend/routes/articles/favorites.js": {
+      "path": "backend/routes/articles/favorites.js",
+      "hash": "83ec143361afcb2849e3d18d794edf57dcd55609ec1d640675c162ca928d03da",
+      "bytes": 409,
+      "summary": "定义文章收藏相关路由，挂载需身份校验的收藏、取消收藏接口，复用favoriteToggler控制器处理逻辑",
+      "tags": [
+        "express",
+        "router",
+        "文章收藏",
+        "鉴权",
+        "restful接口",
+        "后端路由"
+      ],
+      "symbols": [
+        "router",
+        "verifyToken",
+        "favoriteToggler"
+      ],
+      "imports": [
+        "const express = require(\"express\");",
+        "const verifyToken = require(\"../../middleware/authentication\");",
+        "const { favoriteToggler } = require(\"../../controllers/favorites\");"
+      ],
+      "updatedAt": 1780849433417
+    },
+    "backend/routes/profiles.js": {
+      "path": "backend/routes/profiles.js",
+      "hash": "c83a4b14184d959af4fee7436e805cdda1c5160dd668b4811a54b708549818c7",
+      "bytes": 477,
+      "summary": "定义Express用户资料路由，所有接口需Token校验，注册获取资料、关注/取消关注用户的接口",
+      "tags": [
+        "express",
+        "router",
+        "profile",
+        "follow",
+        "unfollow",
+        "authentication",
+        "backend"
+      ],
+      "symbols": [
+        "router",
+        "verifyToken",
+        "getProfile",
+        "followToggler"
+      ],
+      "imports": [
+        "const express = require(\"express\");",
+        "const verifyToken = require(\"../middleware/authentication\");",
+        "const { getProfile, followToggler } = require(\"../controllers/profiles\");"
+      ],
+      "updatedAt": 1780849436335
+    },
+    "backend/routes/tags.js": {
+      "path": "backend/routes/tags.js",
+      "hash": "f69c062c7e9b9a3d87f3b74ad08465d0f7893b3e3d7842b2b04b5ce2a175e840",
+      "bytes": 426,
+      "summary": "该文件为后端Express标签路由，定义GET接口查询所有标签，经辅助函数处理后返回列表，异常转发至错误中间件",
+      "tags": [
+        "express",
+        "后端路由",
+        "标签接口",
+        "sequelize",
+        "异步处理"
+      ],
+      "symbols": [
+        "router",
+        "Tag",
+        "appendTagList",
+        "全量标签查询接口"
+      ],
+      "imports": [
+        "const express = require(\"express\");",
+        "const { Tag } = require(\"../models\");",
+        "const { appendTagList } = require(\"../helper/helpers\");"
+      ],
+      "updatedAt": 1780849439024
+    },
+    "backend/routes/user.js": {
+      "path": "backend/routes/user.js",
+      "hash": "292576be4c04a7a348a0ff7b0265cdc0121e25c2b13a2755a94961be1f82d6d3",
+      "bytes": 354,
+      "summary": "该文件为Express用户路由模块，挂载需token校验的获取当前用户、更新用户两个接口，导出路由实例",
+      "tags": [
+        "express",
+        "router",
+        "用户路由",
+        "身份校验",
+        "后端接口",
+        "路由定义"
+      ],
+      "symbols": [
+        "router",
+        "verifyToken",
+        "currentUser",
+        "updateUser"
+      ],
+      "imports": [
+        "const express = require(\"express\");",
+        "const verifyToken = require(\"../middleware/authentication\");",
+        "const { currentUser, updateUser } = require(\"../controllers/user\");"
+      ],
+      "updatedAt": 1780849436087
+    },
+    "backend/routes/users.js": {
+      "path": "backend/routes/users.js",
+      "hash": "8891991afa87323418d268a780135123d95b22c391d28b040ff75bf1ab8617dc",
+      "bytes": 244,
+      "summary": "该文件为Express用户路由模块，挂载用户注册、登录两个POST接口，绑定对应控制器的处理方法",
+      "tags": [
+        "express",
+        "router",
+        "用户认证",
+        "后端路由",
+        "接口定义"
+      ],
+      "symbols": [
+        "router",
+        "signUp",
+        "signIn"
+      ],
+      "imports": [
+        "const express = require(\"express\");",
+        "const { signUp, signIn } = require(\"../controllers/users\");"
+      ],
+      "updatedAt": 1780849437529
+    },
+    "backend/seeders/20220427123216-create-users.js": {
+      "path": "backend/seeders/20220427123216-create-users.js",
+      "hash": "5d3334a4d32de28dee1acc2dceb6919baf4be566efacee7b00189403f4bd9b84",
+      "bytes": 547,
+      "summary": "该Sequelize种子文件用于初始化Users表测试数据，up批量插入5条示例用户，down方法清空全表用户数据",
+      "tags": [
+        "sequelize",
+        "seeder",
+        "用户数据",
+        "测试数据",
+        "数据库填充",
+        "批量插入"
+      ],
+      "symbols": [
+        "up",
+        "down"
+      ],
+      "imports": [],
+      "updatedAt": 1780849438227
+    },
+    "backend/seeders/20220427123222-create-articles.js": {
+      "path": "backend/seeders/20220427123222-create-articles.js",
+      "hash": "8ea5fe8cbf76815186f1dcd744c89b3d091913b31ce899f9274e41f134cbeea3",
+      "bytes": 1228,
+      "summary": "这是Sequelize文章表种子文件，up生成55条关联随机用户的测试文章，down批量清空Articles表数据",
+      "tags": [
+        "sequelize",
+        "seeder",
+        "数据填充",
+        "articles",
+        "测试数据",
+        "批量操作"
+      ],
+      "symbols": [
+        "up",
+        "down"
+      ],
+      "imports": [
+        "const { User } = require(\"../models\");"
+      ],
+      "updatedAt": 1780849438281
+    },
+    "frontend/index.html": {
+      "path": "frontend/index.html",
+      "hash": "146efa98525487b22bea71fe165802bb4e86e5d8571357bbcce44c136136c438",
+      "bytes": 1349,
+      "summary": "这是Conduit React项目的入口HTML，配置站点元信息、图标、外部样式，挂载根节点引入主脚本渲染应用。",
+      "tags": [
+        "html",
+        "react入口",
+        "元标签配置",
+        "静态资源引入",
+        "前端入口页",
+        "conduit"
+      ],
+      "symbols": [
+        "#root",
+        "main.jsx"
+      ],
+      "imports": [],
+      "updatedAt": 1780849442937
+    },
+    "frontend/package.json": {
+      "path": "frontend/package.json",
+      "hash": "f248dab640f9a84f44e6cd2469a68673d847350574416bc6decc1c37b699b1c9",
+      "bytes": 727,
+      "summary": "该文件是Vite构建的React前端项目配置，定义项目基础属性、开发构建脚本、生产及开发依赖清单",
+      "tags": [
+        "package.json",
+        "vite",
+        "react",
+        "前端配置",
+        "依赖管理",
+        "构建脚本"
+      ],
+      "symbols": [
+        "build",
+        "dev",
+        "preview",
+        "axios",
+        "react",
+        "react-dom",
+        "vite"
+      ],
+      "imports": [],
+      "updatedAt": 1780849440438
+    },
+    "frontend/public/manifest.json": {
+      "path": "frontend/public/manifest.json",
+      "hash": "81ee9558822b76a10b2a06fa0f7758c4cf99ef824e50565fa0177993991ecaac",
+      "bytes": 423,
+      "summary": "该文件是PWA应用配置清单，定义Conduit Web应用的名称、图标、启动规则、显示模式、主题与背景色等安装元数据。",
+      "tags": [
+        "pwa",
+        "manifest",
+        "前端配置",
+        "web应用",
+        "元数据"
+      ],
+      "symbols": [
+        "short_name",
+        "name",
+        "icons",
+        "start_url",
+        "display",
+        "theme_color",
+        "background_color"
+      ],
+      "imports": [],
+      "updatedAt": 1780849442309
+    },
+    "frontend/src/App.jsx": {
+      "path": "frontend/src/App.jsx",
+      "hash": "e8fc0ef246120ad51e43a0e2206d30205af88a3c244942f355466160fe605856",
+      "bytes": 366,
+      "summary": "React应用根布局组件，渲染全局导航栏、路由Outlet出口、底部页脚，提供全站公共外层结构",
+      "tags": [
+        "react",
+        "jsx",
+        "根组件",
+        "路由布局",
+        "导航栏",
+        "页脚",
+        "前端"
+      ],
+      "symbols": [
+        "App"
+      ],
+      "imports": [
+        "import { Outlet } from \"react-router-dom\";",
+        "import Footer from \"./components/Footer\";",
+        "import Navbar from \"./components/Navbar\";"
+      ],
+      "updatedAt": 1780849443368
+    },
+    "frontend/src/components/ArticleAuthorButtons/ArticleAuthorButtons.jsx": {
+      "path": "frontend/src/components/ArticleAuthorButtons/ArticleAuthorButtons.jsx",
+      "hash": "b0476f483695bec33e4af8112df800d779ef1ef5240f1064e7c02c3ec93fad88",
+      "bytes": 1220,
+      "summary": "该React组件为文章作者提供删除、编辑文章的操作按钮，校验登录状态，处理删除确认跳转，编辑跳转携带文章参数",
+      "tags": [
+        "react",
+        "component",
+        "文章操作",
+        "权限校验",
+        "前端组件",
+        "文章管理"
+      ],
+      "symbols": [
+        "ArticleAuthorButtons",
+        "useAuth",
+        "useNavigate",
+        "Link",
+        "deleteArticle"
+      ],
+      "imports": [
+        "import { Link, useNavigate } from \"react-router-dom\";",
+        "import { useAuth } from \"../../context/AuthContext\";",
+        "import deleteArticle from \"../../services/deleteArticle\";"
+      ],
+      "updatedAt": 1780849444690
+    },
+    "frontend/src/components/ArticleAuthorButtons/index.js": {
+      "path": "frontend/src/components/ArticleAuthorButtons/index.js",
+      "hash": "0a61b01578a27ebb4216c480c52583b6376c164ffa07200867cad4f51fe2a68b",
+      "bytes": 51,
+      "summary": "该文件是文章作者操作按钮组件的入口文件，重新导出同目录下的ArticleAuthorButtons默认组件，简化外部导入路径。",
+      "tags": [
+        "react组件",
+        "入口文件",
+        "组件导出",
+        "前端",
+        "文章模块"
+      ],
+      "symbols": [
+        "ArticleAuthorButtons"
+      ],
+      "imports": [],
+      "updatedAt": 1780849444322
+    },
+    "frontend/src/components/ArticleEditorForm/ArticleEditorForm.jsx": {
+      "path": "frontend/src/components/ArticleEditorForm/ArticleEditorForm.jsx",
+      "hash": "c3774b10d3c0648eef217269dca651ac42a4ba76131d7c7717f380b7093e56a1",
+      "bytes": 4362,
+      "summary": "该React组件实现文章编辑表单，支持新建/编辑文章、草稿保存，校验登录权限，提交后跳转对应页面",
+      "tags": [
+        "react",
+        "form component",
+        "article editor",
+        "权限校验",
+        "草稿保存",
+        "前端"
+      ],
+      "symbols": [
+        "ArticleEditorForm",
+        "inputHandler",
+        "tagsInputHandler",
+        "formSubmit"
+      ],
+      "imports": [
+        "import { useEffect, useState } from \"react\";",
+        "import { useLocation, useNavigate, useParams } from \"react-router-dom\";",
+        "import { useAuth } from \"../../context/AuthContext\";",
+        "import getArticle from \"../../services/getArticle\";",
+        "import setArticle from \"../../services/setArticle\";",
+        "import FormFieldset from \"../FormFieldset\";"
+      ],
+      "updatedAt": 1780850776735
+    },
+    "frontend/src/components/ArticleEditorForm/index.js": {
+      "path": "frontend/src/components/ArticleEditorForm/index.js",
+      "hash": "3e994feadd8ec74ceab4cec17f2e79b5713e09ed90bd9af71eb4365fa9363bad",
+      "bytes": 48,
+      "summary": "该文件是文章编辑器表单组件的入口文件，重导出同目录下的ArticleEditorForm默认组件，简化外部引用路径",
+      "tags": [
+        "组件入口",
+        "重导出",
+        "文章编辑",
+        "前端组件",
+        "react"
+      ],
+      "symbols": [
+        "default"
+      ],
+      "imports": [],
+      "updatedAt": 1780849445367
+    },
+    "frontend/src/components/ArticleMeta/ArticleMeta.jsx": {
+      "path": "frontend/src/components/ArticleMeta/ArticleMeta.jsx",
+      "hash": "e3daa4a9a210348080f52703e6d2a949168bf1ae9728d05d636d59f626813db3",
+      "bytes": 874,
+      "summary": "该React组件渲染文章元信息区域，展示作者头像、可跳转用户名、格式化发布日期，支持传入自定义子元素",
+      "tags": [
+        "react",
+        "jsx",
+        "文章元信息",
+        "路由跳转",
+        "日期格式化",
+        "用户头像"
+      ],
+      "symbols": [
+        "ArticleMeta"
+      ],
+      "imports": [
+        "import { Link } from \"react-router-dom\";",
+        "import dateFormatter from \"../../helpers/dateFormatter\";",
+        "import Avatar from \"../Avatar\";"
+      ],
+      "updatedAt": 1780850542536
+    },
+    "frontend/src/components/ArticleMeta/index.js": {
+      "path": "frontend/src/components/ArticleMeta/index.js",
+      "hash": "134fdb486dbef5896d18c8f2bb89d8973a02d905181820950a71fb3306712134",
+      "bytes": 42,
+      "summary": "作为文章元信息组件的入口文件，重导出同目录下的ArticleMeta默认组件，简化外部导入路径。",
+      "tags": [
+        "组件入口",
+        "react",
+        "默认导出",
+        "前端组件",
+        "文章元信息"
+      ],
+      "symbols": [
+        "default"
+      ],
+      "imports": [],
+      "updatedAt": 1780849449470
+    },
+    "frontend/src/components/ArticleTags/ArticleTags.jsx": {
+      "path": "frontend/src/components/ArticleTags/ArticleTags.jsx",
+      "hash": "a5c749dbd44109941523919ec1af87d327f058e2dcbe062d04be9b5988e8b0d8",
+      "bytes": 325,
+      "summary": "该React函数组件接收文章标签列表属性，非空时渲染带指定样式的无序列表，遍历展示所有传入的文章标签",
+      "tags": [
+        "react组件",
+        "jsx",
+        "文章标签",
+        "列表渲染",
+        "前端"
+      ],
+      "symbols": [
+        "ArticleTags"
+      ],
+      "imports": [],
+      "updatedAt": 1780849449863
+    },
+    "frontend/src/components/ArticleTags/index.js": {
+      "path": "frontend/src/components/ArticleTags/index.js",
+      "hash": "5e60278c0762c7242c44320dd2f2e21518e2f10e72a26182685fe19ec17c09ce",
+      "bytes": 42,
+      "summary": "该文件是文章标签组件的入口文件，重导出同目录下的ArticleTags默认组件，简化外部导入路径",
+      "tags": [
+        "react组件",
+        "入口文件",
+        "重导出",
+        "前端",
+        "组件导出"
+      ],
+      "symbols": [
+        "ArticleTags"
+      ],
+      "imports": [],
+      "updatedAt": 1780849449168
+    },
+    "frontend/src/components/ArticlesButtons/ArticlesButtons.jsx": {
+      "path": "frontend/src/components/ArticlesButtons/ArticlesButtons.jsx",
+      "hash": "b556dad38f60c93f74265c9962d4c28ee7e3ac126cd1a95ef4493f54aca39bf2",
+      "bytes": 960,
+      "summary": "该组件判断登录用户是否为文章作者，条件渲染对应操作按钮，作者展示专属按钮，非作者展示关注、收藏按钮。",
+      "tags": [
+        "react",
+        "jsx",
+        "组件",
+        "文章操作",
+        "权限控制",
+        "按钮组件",
+        "前端"
+      ],
+      "symbols": [
+        "ArticlesButtons"
+      ],
+      "imports": [
+        "import { useParams } from \"react-router-dom\";",
+        "import { useAuth } from \"../../context/AuthContext\";",
+        "import ArticleAuthorButtons from \"../ArticleAuthorButtons\";",
+        "import FavButton from \"../FavButton\";",
+        "import FollowButton from \"../FollowButton\";"
+      ],
+      "updatedAt": 1780849453209
+    },
+    "frontend/src/components/ArticlesButtons/index.js": {
+      "path": "frontend/src/components/ArticlesButtons/index.js",
+      "hash": "67cb0fdb3e34479ecb4e1f2b3d4e147b272978294e02d7850529179ee6563ddc",
+      "bytes": 46,
+      "summary": "该文件是ArticlesButtons组件的入口文件，重新导出同目录下ArticlesButtons的默认导出，简化外部引入路径。",
+      "tags": [
+        "组件入口",
+        "默认导出",
+        "react组件",
+        "articlesbuttons"
+      ],
+      "symbols": [
+        "ArticlesButtons"
+      ],
+      "imports": [],
+      "updatedAt": 1780849451200
+    },
+    "frontend/src/components/ArticlesPagination/ArticlesPagination.jsx": {
+      "path": "frontend/src/components/ArticlesPagination/ArticlesPagination.jsx",
+      "hash": "54829df637e774a46353c548c63ae8c6428da8b93e3321244d3d42d132fcdfba",
+      "bytes": 1250,
+      "summary": "该React文章分页组件基于react-paginate实现，每页固定3条，切换页码时调用接口拉取对应文章更新列表。",
+      "tags": [
+        "react",
+        "pagination",
+        "文章分页",
+        "前端组件",
+        "列表交互",
+        "jsx"
+      ],
+      "symbols": [
+        "ArticlesPagination"
+      ],
+      "imports": [
+        "import ReactPaginate from \"react-paginate\";",
+        "import { useAuth } from \"../../context/AuthContext\";",
+        "import getArticles from \"../../services/getArticles\";"
+      ],
+      "updatedAt": 1780849450760
+    },
+    "frontend/src/components/ArticlesPagination/index.js": {
+      "path": "frontend/src/components/ArticlesPagination/index.js",
+      "hash": "f1a724753f9e240b8bde4130d863b5609f17b234678f6b1b65fd06ea10e863b0",
+      "bytes": 49,
+      "summary": "该文件是文章分页组件的入口模块，直接重导出同目录下的ArticlesPagination默认组件，对外暴露分页能力。",
+      "tags": [
+        "前端组件",
+        "入口导出",
+        "文章分页",
+        "react",
+        "组件封装"
+      ],
+      "symbols": [
+        "ArticlesPagination"
+      ],
+      "imports": [],
+      "updatedAt": 1780849452373
+    },
+    "frontend/src/components/ArticlesPreview/ArticlesPreview.jsx": {
+      "path": "frontend/src/components/ArticlesPreview/ArticlesPreview.jsx",
+      "hash": "cd873ba8a04a55a1e6390ac3d5acec2752162b41295bd86b61e2b0a4e6ed3056",
+      "bytes": 1569,
+      "summary": "该React组件接收文章列表、加载状态等参数，渲染文章预览卡片，处理收藏交互，适配加载态与空数据态展示",
+      "tags": [
+        "react",
+        "jsx",
+        "文章预览",
+        "前端组件",
+        "收藏交互",
+        "列表渲染"
+      ],
+      "symbols": [
+        "ArticlesPreview",
+        "handleFav"
+      ],
+      "imports": [
+        "import { Link } from \"react-router-dom\";",
+        "import ArticleMeta from \"../ArticleMeta\";",
+        "import ArticleTags from \"../ArticleTags\";",
+        "import FavButton from \"../FavButton\";"
+      ],
+      "updatedAt": 1780850541964
+    },
+    "frontend/src/components/ArticlesPreview/index.js": {
+      "path": "frontend/src/components/ArticlesPreview/index.js",
+      "hash": "9da18dbcd3a7ed62ce4cf6751d0ec217efadd2db248f050c84e3f877ab55c44e",
+      "bytes": 46,
+      "summary": "该文件是文章预览组件的入口文件，重新导出同目录下的ArticlesPreview组件，简化外部导入路径",
+      "tags": [
+        "组件入口",
+        "重新导出",
+        "react组件",
+        "前端"
+      ],
+      "symbols": [
+        "default"
+      ],
+      "imports": [],
+      "updatedAt": 1780849458126
+    },
+    "frontend/src/components/AuthPageContainer/AuthPageContainer.jsx": {
+      "path": "frontend/src/components/AuthPageContainer/AuthPageContainer.jsx",
+      "hash": "d1143285dde7e7d25f3770fb5d9fd93b2d3805641b9422d8a98ec23c0a55e954",
+      "bytes": 708,
+      "summary": "React认证页面通用容器组件，居中渲染标题、跳转链接、错误提示，承载子内容，适配响应式布局",
+      "tags": [
+        "react",
+        "jsx",
+        "前端组件",
+        "用户认证",
+        "容器组件",
+        "响应式布局"
+      ],
+      "symbols": [
+        "AuthPageContainer"
+      ],
+      "imports": [
+        "import { Link } from \"react-router-dom\";",
+        "import ContainerRow from \"../ContainerRow\";"
+      ],
+      "updatedAt": 1780849455104
+    },
+    "frontend/src/components/AuthPageContainer/index.js": {
+      "path": "frontend/src/components/AuthPageContainer/index.js",
+      "hash": "2cc19cfce761469db98bbbc6398253edb79c3a30a2c5e3d5b58c3beeae9e6610",
+      "bytes": 48,
+      "summary": "该文件是认证页容器组件的入口文件，重导出同目录下的AuthPageContainer默认组件，简化外部引入路径",
+      "tags": [
+        "react组件",
+        "入口文件",
+        "重导出",
+        "认证模块",
+        "前端"
+      ],
+      "symbols": [
+        "AuthPageContainer"
+      ],
+      "imports": [],
+      "updatedAt": 1780849456384
+    },
+    "frontend/src/components/AuthorInfo/AuthorInfo.jsx": {
+      "path": "frontend/src/components/AuthorInfo/AuthorInfo.jsx",
+      "hash": "e7ec3147afa85e1b1c51988b5e51d1d4c9f620a698e3d32f89433bed6f72de02",
+      "bytes": 1804,
+      "summary": "该React组件渲染作者头像、用户名、简介等信息，支持跳转编辑个人资料或展示关注按钮，自动拉取对应作者资料",
+      "tags": [
+        "react",
+        "jsx",
+        "author info",
+        "profile display",
+        "follow function",
+        "markdown render",
+        "frontend"
+      ],
+      "symbols": [
+        "AuthorInfo"
+      ],
+      "imports": [
+        "import Markdown from \"markdown-to-jsx\";",
+        "import { useEffect, useState } from \"react\";",
+        "import { Link, useLocation, useNavigate, useParams } from \"react-router-dom\";",
+        "import { useAuth } from \"../../context/AuthContext\";",
+        "import getProfile from \"../../services/getProfile\";",
+        "import Avatar from \"../Avatar\";",
+        "import FollowButton from \"../FollowButton\";"
+      ],
+      "updatedAt": 1780849460540
+    },
+    "frontend/src/components/AuthorInfo/index.js": {
+      "path": "frontend/src/components/AuthorInfo/index.js",
+      "hash": "32856e93bccbd41937f0099f7cb73981416bce5415738a011350efa33b881c2a",
+      "bytes": 41,
+      "summary": "该文件是作者信息组件的入口，直接重导出同目录下的AuthorInfo默认组件，简化外部引入路径",
+      "tags": [
+        "组件入口",
+        "重导出",
+        "react",
+        "前端组件",
+        "导出"
+      ],
+      "symbols": [
+        "default"
+      ],
+      "imports": [],
+      "updatedAt": 1780849458153
+    },
+    "frontend/src/components/Avatar/Avatar.jsx": {
+      "path": "frontend/src/components/Avatar/Avatar.jsx",
+      "hash": "32b333fb597ef7c9d53eb5182c84793cc962c8a46035a42303ce6551b06f2290",
+      "bytes": 261,
+      "summary": "实现React通用头像组件，支持传入alt、自定义类名、图片源属性，未传参时使用内置默认占位图兜底渲染",
+      "tags": [
+        "react",
+        "ui组件",
+        "头像组件",
+        "jsx",
+        "可复用组件",
+        "前端"
+      ],
+      "symbols": [
+        "Avatar"
+      ],
+      "imports": [
+        "import avatar from \"../../assets/smiley-cyrus.jpeg\";"
+      ],
+      "updatedAt": 1780849457561
+    },
+    "frontend/src/components/Avatar/index.js": {
+      "path": "frontend/src/components/Avatar/index.js",
+      "hash": "6a9b0e4e7f229f540e48aacd73879c44b71384c53c11cdbbe9af6ba95a7c0b1b",
+      "bytes": 37,
+      "summary": "该文件是Avatar头像组件的入口文件，重新导出同目录下的Avatar组件默认值，简化外部引入路径",
+      "tags": [
+        "avatar组件",
+        "入口文件",
+        "组件导出",
+        "前端组件"
+      ],
+      "symbols": [
+        "default"
+      ],
+      "imports": [],
+      "updatedAt": 1780849460889
+    },
+    "frontend/src/components/BannerContainer/BannerContainer.jsx": {
+      "path": "frontend/src/components/BannerContainer/BannerContainer.jsx",
+      "hash": "fe805956ea727c3e0be359e7a32b34af9cbfde5db4ef912d9922a84a8c9b1511",
+      "bytes": 207,
+      "summary": "定义无状态React横幅容器组件，外层带banner类，嵌套标准container容器，用于包裹横幅区域子内容",
+      "tags": [
+        "react",
+        "jsx",
+        "横幅组件",
+        "容器组件",
+        "无状态组件",
+        "前端"
+      ],
+      "symbols": [
+        "BannerContainer"
+      ],
+      "imports": [],
+      "updatedAt": 1780849461236
+    },
+    "frontend/src/components/BannerContainer/index.js": {
+      "path": "frontend/src/components/BannerContainer/index.js",
+      "hash": "4488a3973e2a9aca6739ed4f201e5039a6bf8fcad1b41654cde8d7130124a883",
+      "bytes": 46,
+      "summary": "该文件是BannerContainer组件的入口导出文件，重导出同目录下的BannerContainer默认组件，简化外部导入路径",
+      "tags": [
+        "入口文件",
+        "组件导出",
+        "react组件",
+        "前端"
+      ],
+      "symbols": [
+        "BannerContainer"
+      ],
+      "imports": [],
+      "updatedAt": 1780849460791
+    },
+    "frontend/src/components/CommentEditor/CommentEditor.jsx": {
+      "path": "frontend/src/components/CommentEditor/CommentEditor.jsx",
+      "hash": "5c7bb19a08a031baa0b32af66f917cbc0c1d04616541df40bfb48dddbf3a2815",
+      "bytes": 1546,
+      "summary": "实现文章评论编辑提交组件，登录用户可发布评论，未登录提示跳转登录注册，提交后更新评论列表并清空输入",
+      "tags": [
+        "react",
+        "评论组件",
+        "表单提交",
+        "权限控制",
+        "前端组件",
+        "交互"
+      ],
+      "symbols": [
+        "CommentEditor",
+        "handleSubmit",
+        "handleChange"
+      ],
+      "imports": [
+        "import { useState } from \"react\";",
+        "import { Link, useParams } from \"react-router-dom\";",
+        "import { useAuth } from \"../../context/AuthContext\";",
+        "import postComment from \"../../services/postComment\";",
+        "import Avatar from \"../Avatar\";"
+      ],
+      "updatedAt": 1780849464299
+    },
+    "frontend/src/components/CommentEditor/index.js": {
+      "path": "frontend/src/components/CommentEditor/index.js",
+      "hash": "732325a62f0c9c2cd74543ed259ab8bbe08c80f54ab3c7fde2bf77be52130e30",
+      "bytes": 44,
+      "summary": "该文件是评论编辑器组件的入口文件，重新导出同目录下的CommentEditor默认组件，简化外部引入路径。",
+      "tags": [
+        "react组件",
+        "入口文件",
+        "重新导出",
+        "评论编辑器",
+        "前端组件"
+      ],
+      "symbols": [
+        "CommentEditor"
+      ],
+      "imports": [],
+      "updatedAt": 1780849465366
+    },
+    "frontend/src/components/CommentList/CommentAuthor.jsx": {
+      "path": "frontend/src/components/CommentList/CommentAuthor.jsx",
+      "hash": "e09ee3523e9bad32f286dc895239988c34ec7e97456a7dc226b4b22aca9d26e4",
+      "bytes": 666,
+      "summary": "实现评论作者展示组件，渲染头像、用户名跳转链接，携带作者信息跳转至对应用户个人主页",
+      "tags": [
+        "react",
+        "jsx",
+        "评论组件",
+        "作者展示",
+        "路由跳转",
+        "头像渲染"
+      ],
+      "symbols": [
+        "CommentAuthor"
+      ],
+      "imports": [
+        "import { Link } from \"react-router-dom\";",
+        "import Avatar from \"../Avatar\";"
+      ],
+      "updatedAt": 1780849464737
+    },
+    "frontend/src/components/CommentList/CommentList.jsx": {
+      "path": "frontend/src/components/CommentList/CommentList.jsx",
+      "hash": "aba4d7427ed267f98fad5403bad8a319deae708fb1ff9b482d60aa305c387237",
+      "bytes": 1903,
+      "summary": "该React组件用于展示文章评论列表，根据路由slug拉取对应评论，支持已登录用户删除自身发布的评论",
+      "tags": [
+        "react",
+        "comment list",
+        "前端组件",
+        "评论渲染",
+        "权限校验",
+        "交互组件",
+        "文章模块"
+      ],
+      "symbols": [
+        "CommentList",
+        "handleClick"
+      ],
+      "imports": [
+        "import { useEffect, useState } from \"react\";",
+        "import { useParams } from \"react-router-dom\";",
+        "import { useAuth } from \"../../context/AuthContext\";",
+        "import dateFormatter from \"../../helpers/dateFormatter\";",
+        "import deleteComment from \"../../services/deleteComment\";",
+        "import getComments from \"../../services/getComments\";",
+        "import CommentAuthor from \"./CommentAuthor\";"
+      ],
+      "updatedAt": 1780849470550
+    },
+    "frontend/src/components/CommentList/index.js": {
+      "path": "frontend/src/components/CommentList/index.js",
+      "hash": "8ec947e90c0bf0ffdafca7068269579ef459ceb15718ef7625f5b5260736b0c5",
+      "bytes": 42,
+      "summary": "该文件是评论列表组件的入口文件，重导出同级CommentList组件作为默认导出，简化外部模块引入路径",
+      "tags": [
+        "组件入口",
+        "重导出",
+        "前端",
+        "评论列表"
+      ],
+      "symbols": [
+        "CommentList"
+      ],
+      "imports": [],
+      "updatedAt": 1780849466302
+    },
+    "frontend/src/components/ContainerRow/ContainerRow.jsx": {
+      "path": "frontend/src/components/ContainerRow/ContainerRow.jsx",
+      "hash": "9bd9e56ae8369936d36d2638a5d42e8e4581a1b65cd536e360884bb26216bb68",
+      "bytes": 222,
+      "summary": "该React布局组件渲染带可选type类名的container嵌套row结构，用于包裹子元素，提供基础栅格布局容器",
+      "tags": [
+        "react",
+        "布局组件",
+        "jsx",
+        "容器组件",
+        "栅格布局",
+        "前端"
+      ],
+      "symbols": [
+        "ContainerRow"
+      ],
+      "imports": [],
+      "updatedAt": 1780849465939
+    },
+    "frontend/src/components/ContainerRow/index.js": {
+      "path": "frontend/src/components/ContainerRow/index.js",
+      "hash": "6fd08b35347e864f810046b43b7b523f8e31108e0a21ed13f2d11378d20dca52",
+      "bytes": 43,
+      "summary": "该文件是ContainerRow布局组件的入口文件，通过重导出同目录下的组件默认值，简化外部引入路径。",
+      "tags": [
+        "react组件",
+        "入口文件",
+        "重导出",
+        "布局容器",
+        "前端组件"
+      ],
+      "symbols": [
+        "ContainerRow"
+      ],
+      "imports": [],
+      "updatedAt": 1780849467445
+    },
+    "frontend/src/components/FavButton/FavButton.jsx": {
+      "path": "frontend/src/components/FavButton/FavButton.jsx",
+      "hash": "65c7602056872a53bcaecda0ec092dad915e4b8009ebf43becbb43e08bec4765",
+      "bytes": 1086,
+      "summary": "React收藏按钮组件，校验登录状态，调用收藏接口处理切换逻辑，管理加载态，展示收藏数，支持样式位置自定义",
+      "tags": [
+        "react",
+        "component",
+        "favorite button",
+        "前端组件",
+        "交互组件",
+        "状态管理"
+      ],
+      "symbols": [
+        "FavButton"
+      ],
+      "imports": [
+        "import { useState } from \"react\";",
+        "import { useAuth } from \"../../context/AuthContext\";",
+        "import toggleFav from \"../../services/toggleFav\";"
+      ],
+      "updatedAt": 1780849468115
+    },
+    "frontend/src/components/FavButton/index.js": {
+      "path": "frontend/src/components/FavButton/index.js",
+      "hash": "266d33fd9f8c2526a4acaa88142bf560069cfd47d8ef14a16c9b631e9300f307",
+      "bytes": 40,
+      "summary": "该文件是收藏按钮FavButton组件的入口文件，重导出同目录下的FavButton组件，简化外部导入路径",
+      "tags": [
+        "组件入口",
+        "重新导出",
+        "收藏按钮",
+        "ui组件",
+        "前端"
+      ],
+      "symbols": [
+        "FavButton"
+      ],
+      "imports": [],
+      "updatedAt": 1780849471452
+    },
+    "frontend/src/components/FeedToggler/FeedNavLink.jsx": {
+      "path": "frontend/src/components/FeedToggler/FeedNavLink.jsx",
+      "hash": "b24a2791dadb263fc2b57871728653caf8d27c73c7d07bea6c93df3b234e5a72",
+      "bytes": 518,
+      "summary": "该组件是Feed流导航链接项，消费Feed上下文，点击触发标签切换，自动匹配当前激活标签展示高亮样式",
+      "tags": [
+        "react",
+        "feed模块",
+        "导航组件",
+        "context消费",
+        "标签切换",
+        "前端组件"
+      ],
+      "symbols": [
+        "FeedNavLink"
+      ],
+      "imports": [
+        "import { useFeedContext } from \"../../context/FeedContext\";"
+      ],
+      "updatedAt": 1780849471203
+    },
+    "frontend/src/components/FeedToggler/FeedToggler.jsx": {
+      "path": "frontend/src/components/FeedToggler/FeedToggler.jsx",
+      "hash": "092d47424151a5fc8350e1eac7bc5d398b1b07b3cc66ae16dce9de244a266028",
+      "bytes": 642,
+      "summary": "该React组件实现内容流切换导航，消费Auth与Feed上下文，根据登录态、当前选中项动态渲染对应流的导航入口。",
+      "tags": [
+        "react",
+        "ui component",
+        "feed navigation",
+        "context",
+        "jsx",
+        "frontend"
+      ],
+      "symbols": [
+        "FeedToggler"
+      ],
+      "imports": [
+        "import { useAuth } from \"../../context/AuthContext\";",
+        "import { useFeedContext } from \"../../context/FeedContext\";",
+        "import FeedNavLink from \"./FeedNavLink\";"
+      ],
+      "updatedAt": 1780849473989
+    },
+    "frontend/src/components/FeedToggler/index.js": {
+      "path": "frontend/src/components/FeedToggler/index.js",
+      "hash": "2471df29eba5a4d2b9100934f5f63a87369bdced0b7d8acee8b44e5d7dd9d0a5",
+      "bytes": 42,
+      "summary": "该文件是FeedToggler信息流切换组件的入口文件，重导出同级组件默认值，简化外部导入路径",
+      "tags": [
+        "组件入口",
+        "默认导出",
+        "前端组件",
+        "feed切换组件"
+      ],
+      "symbols": [
+        "FeedToggler"
+      ],
+      "imports": [],
+      "updatedAt": 1780849474243
+    },
+    "frontend/src/components/FollowButton/FollowButton.jsx": {
+      "path": "frontend/src/components/FollowButton/FollowButton.jsx",
+      "hash": "13d665570a2a7178874569c8f41828554f320598efdbfc4134e9e8045874eda6",
+      "bytes": 1209,
+      "summary": "React关注按钮组件，校验登录状态，调用关注接口切换关注状态，展示粉丝数，加载时禁用按钮。",
+      "tags": [
+        "react",
+        "follow button",
+        "前端组件",
+        "用户关注",
+        "交互组件",
+        "状态管理"
+      ],
+      "symbols": [
+        "FollowButton"
+      ],
+      "imports": [
+        "import { useState } from \"react\";",
+        "import { useAuth } from \"../../context/AuthContext\";",
+        "import toggleFollow from \"../../services/toggleFollow\";"
+      ],
+      "updatedAt": 1780849476134
+    },
+    "frontend/src/components/FollowButton/index.js": {
+      "path": "frontend/src/components/FollowButton/index.js",
+      "hash": "7429d0091e6a8dd38139ff63de4669973ba6178540e43f7668ed44a0d206e9c3",
+      "bytes": 43,
+      "summary": "作为关注按钮组件的入口文件，重导出同目录下的FollowButton默认组件，简化外部导入路径",
+      "tags": [
+        "组件入口",
+        "关注按钮",
+        "react组件",
+        "模块导出"
+      ],
+      "symbols": [
+        "default"
+      ],
+      "imports": [],
+      "updatedAt": 1780849474931
+    },
+    "frontend/src/components/Footer/Footer.jsx": {
+      "path": "frontend/src/components/Footer/Footer.jsx",
+      "hash": "7bb30dafe8a1665f6869edfa5db08dda808044396050abfec104487ce4ff5b28",
+      "bytes": 521,
+      "summary": "这是Conduit项目的页脚组件，渲染首页跳转Logo、版权归属说明，同时展示右侧的源码链接入口。",
+      "tags": [
+        "react",
+        "页脚组件",
+        "footer",
+        "react-router",
+        "ui组件",
+        "前端"
+      ],
+      "symbols": [
+        "Footer"
+      ],
+      "imports": [
+        "import { Link } from \"react-router-dom\";",
+        "import SourceCodeLink from \"../SourceCodeLink\";"
+      ],
+      "updatedAt": 1780849477760
+    },
+    "frontend/src/components/Footer/index.js": {
+      "path": "frontend/src/components/Footer/index.js",
+      "hash": "0cda60e581ec3e20a9ffe52a8937c204401ee670d93b29fcc322de487dfcee43",
+      "bytes": 37,
+      "summary": "该文件是页脚Footer组件的入口文件，重导出同目录下的Footer组件默认导出，简化外部引入路径。",
+      "tags": [
+        "footer组件",
+        "入口文件",
+        "组件导出",
+        "react",
+        "前端组件"
+      ],
+      "symbols": [
+        "default"
+      ],
+      "imports": [],
+      "updatedAt": 1780849480178
+    },
+    "frontend/src/components/FormFieldset/FormFieldset.jsx": {
+      "path": "frontend/src/components/FormFieldset/FormFieldset.jsx",
+      "hash": "bdf4054491b8ef064d73c9cc7161d759d98cb4b47bde1c976d4c490ede68e511",
+      "bytes": 593,
+      "summary": "React表单字段集组件，封装带样式的输入控件，透传各类表单属性，支持传入子元素扩展自定义内容",
+      "tags": [
+        "react",
+        "form组件",
+        "表单输入",
+        "jsx",
+        "前端组件"
+      ],
+      "symbols": [
+        "FormFieldset"
+      ],
+      "imports": [],
+      "updatedAt": 1780849474943
+    },
+    "frontend/src/components/FormFieldset/index.js": {
+      "path": "frontend/src/components/FormFieldset/index.js",
+      "hash": "b5230b03a4c2f1f7387c84eab2f45945728ed7fb5556e53b8fe5a7c16a37b90f",
+      "bytes": 43,
+      "summary": "该文件是FormFieldset表单字段分组组件的入口，重导出同目录下的FormFieldset默认组件，简化外部导入路径。",
+      "tags": [
+        "组件入口",
+        "表单组件",
+        "react",
+        "重导出",
+        "前端"
+      ],
+      "symbols": [
+        "FormFieldset"
+      ],
+      "imports": [],
+      "updatedAt": 1780849478312
+    },
+    "frontend/src/components/LoginForm/LoginForm.jsx": {
+      "path": "frontend/src/components/LoginForm/LoginForm.jsx",
+      "hash": "901646293bbfb4045357b96f90df1c299a289093152d1dab26fa1f83306a2222",
+      "bytes": 1398,
+      "summary": "React登录表单组件，收集邮箱密码提交登录，成功跳转首页，异常通过传入的onError回调通知上层",
+      "tags": [
+        "react",
+        "登录表单",
+        "表单组件",
+        "认证",
+        "路由跳转",
+        "前端"
+      ],
+      "symbols": [
+        "LoginForm",
+        "handleSubmit",
+        "inputHandler"
+      ],
+      "imports": [
+        "import { useState } from \"react\";",
+        "import { useNavigate } from \"react-router-dom\";",
+        "import { useAuth } from \"../../context/AuthContext\";",
+        "import userLogin from \"../../services/userLogin\";",
+        "import FormFieldset from \"../FormFieldset\";"
+      ],
+      "updatedAt": 1780849481813
+    },
+    "frontend/src/components/LoginForm/index.js": {
+      "path": "frontend/src/components/LoginForm/index.js",
+      "hash": "840eba0d29f935a7aec98a03f774f9e0fe6eff0bc4ddfd6a839c40adf91f215e",
+      "bytes": 40,
+      "summary": "该文件是登录表单组件的入口文件，重导出同目录下的LoginForm默认组件，简化外部导入路径。",
+      "tags": [
+        "组件入口",
+        "重新导出",
+        "登录表单",
+        "前端组件",
+        "react"
+      ],
+      "symbols": [
+        "LoginForm"
+      ],
+      "imports": [],
+      "updatedAt": 1780849479917
+    },
+    "frontend/src/components/NavItem/NavItem.jsx": {
+      "path": "frontend/src/components/NavItem/NavItem.jsx",
+      "hash": "2076b7cb2ff6491a6da3a9690b12950f7d0894fe352ed47ae340d696f66d6f91",
+      "bytes": 405,
+      "summary": "实现通用导航项组件，基于react-router-dom的NavLink渲染带图标、文本的跳转链接，自动处理路由激活态样式",
+      "tags": [
+        "react",
+        "jsx",
+        "导航组件",
+        "路由",
+        "react-router-dom",
+        "前端"
+      ],
+      "symbols": [
+        "NavItem"
+      ],
+      "imports": [
+        "import { NavLink } from \"react-router-dom\";"
+      ],
+      "updatedAt": 1780849480970
+    },
+    "frontend/src/components/NavItem/index.js": {
+      "path": "frontend/src/components/NavItem/index.js",
+      "hash": "02027ae00e242105eda9e7c5c19e0f6024ccade8176400070c530681139a31df",
+      "bytes": 38,
+      "summary": "作为导航项NavItem组件的入口文件，重新导出同目录下的NavItem默认组件，简化外部导入路径",
+      "tags": [
+        "react组件",
+        "入口文件",
+        "重新导出",
+        "导航组件",
+        "前端"
+      ],
+      "symbols": [
+        "default"
+      ],
+      "imports": [],
+      "updatedAt": 1780849482723
+    },
+    "frontend/src/components/Navbar/DropdownItem.jsx": {
+      "path": "frontend/src/components/Navbar/DropdownItem.jsx",
+      "hash": "6925c6b64b57dfe763ec081496171607d6d93f996a1c82dd01541aa29242c20a",
+      "bytes": 339,
+      "summary": "定义导航栏下拉菜单项组件，基于React Router的Link实现，支持配置点击事件、图标、跳转路径与路由状态",
+      "tags": [
+        "react组件",
+        "dropdown",
+        "路由跳转",
+        "导航组件",
+        "link",
+        "前端"
+      ],
+      "symbols": [
+        "DropdownItem"
+      ],
+      "imports": [
+        "import { Link } from \"react-router-dom\";"
+      ],
+      "updatedAt": 1780849482256
+    },
+    "frontend/src/components/Navbar/DropdownMenu.jsx": {
+      "path": "frontend/src/components/Navbar/DropdownMenu.jsx",
+      "hash": "0e6625fa09abd607b703e3779ec21684d850d40d019cb6066e0df52401d204d6",
+      "bytes": 1388,
+      "summary": "该React组件实现导航栏用户下拉菜单，控制菜单显隐，展示用户头像与用户名，提供个人页、设置、登出入口。",
+      "tags": [
+        "react",
+        "导航栏",
+        "下拉菜单",
+        "前端组件",
+        "用户菜单",
+        "登出"
+      ],
+      "symbols": [
+        "DropdownMenu",
+        "logout",
+        "handleClick"
+      ],
+      "imports": [
+        "import { useState } from \"react\";",
+        "import { useAuth } from \"../../context/AuthContext\";",
+        "import userLogout from \"../../services/userLogout\";",
+        "import Avatar from \"../Avatar\";",
+        "import DropdownItem from \"./DropdownItem\";"
+      ],
+      "updatedAt": 1780849487425
+    },
+    "frontend/src/components/Navbar/Navbar.jsx": {
+      "path": "frontend/src/components/Navbar/Navbar.jsx",
+      "hash": "52240f86a30a529dc12bfc9cdeb24d05ee40685ed9f45f95d42bf48fcc1221f8",
+      "bytes": 1071,
+      "summary": "实现顶部导航栏组件，基于用户登录状态动态渲染不同导航入口，支持跳转首页、登录、注册、编辑器等页面",
+      "tags": [
+        "react",
+        "navbar",
+        "jsx",
+        "路由导航",
+        "权限控制",
+        "前端组件"
+      ],
+      "symbols": [
+        "Navbar"
+      ],
+      "imports": [
+        "import { Link } from \"react-router-dom\";",
+        "import { useAuth } from \"../../context/AuthContext\";",
+        "import NavItem from \"../NavItem\";",
+        "import SourceCodeLink from \"../SourceCodeLink\";",
+        "import DropdownMenu from \"./DropdownMenu\";"
+      ],
+      "updatedAt": 1780849486450
+    },
+    "frontend/src/components/Navbar/index.js": {
+      "path": "frontend/src/components/Navbar/index.js",
+      "hash": "6b0bd3f378b46910a75f070d00bf21e4820a0f89158fb7b9d8928ca50e6cf3f6",
+      "bytes": 37,
+      "summary": "该文件是导航栏Navbar组件的入口文件，重导出同级Navbar组件的默认导出，简化外部引入该组件的路径",
+      "tags": [
+        "navbar",
+        "导航栏",
+        "组件入口",
+        "重导出",
+        "前端组件"
+      ],
+      "symbols": [
+        "default"
+      ],
+      "imports": [],
+      "updatedAt": 1780849485864
+    },
+    "frontend/src/components/PopularTags/PopularTags.jsx": {
+      "path": "frontend/src/components/PopularTags/PopularTags.jsx",
+      "hash": "856c9eae06c78702a6af61a8a6d22766598d6a015139dcc76027c7cf890b5a1a",
+      "bytes": 862,
+      "summary": "该React组件调用标签服务获取热门标签，处理加载与空状态，渲染侧边栏的热门标签展示区域",
+      "tags": [
+        "react",
+        "component",
+        "tags",
+        "sidebar",
+        "frontend",
+        "ui"
+      ],
+      "symbols": [
+        "PopularTags"
+      ],
+      "imports": [
+        "import { useEffect, useState } from \"react\";",
+        "import getTags from \"../../services/getTags\";",
+        "import TagButton from \"./TagButton\";"
+      ],
+      "updatedAt": 1780849488065
+    },
+    "frontend/src/components/PopularTags/TagButton.jsx": {
+      "path": "frontend/src/components/PopularTags/TagButton.jsx",
+      "hash": "fc533154e01265713ea41e251a0038d7f542fbf798f6511044b0636e96b66d32",
+      "bytes": 406,
+      "summary": "该组件接收标签列表，截取前50项渲染为标签按钮，点击时调用Feed上下文的changeTab切换对应标签页",
+      "tags": [
+        "react",
+        "ui component",
+        "tag",
+        "button",
+        "feed context"
+      ],
+      "symbols": [
+        "TagButton"
+      ],
+      "imports": [
+        "import { useFeedContext } from \"../../context/FeedContext\";"
+      ],
+      "updatedAt": 1780849486696
+    },
+    "frontend/src/components/PopularTags/index.js": {
+      "path": "frontend/src/components/PopularTags/index.js",
+      "hash": "ba7e72e4f220296dd7f959287d88069fd08211e15816789368c3a9543863fcae",
+      "bytes": 42,
+      "summary": "作为PopularTags组件的入口文件，重新导出同目录下的对应默认组件，简化外部导入路径",
+      "tags": [
+        "组件入口",
+        "重新导出",
+        "react",
+        "前端组件"
+      ],
+      "symbols": [
+        "PopularTags"
+      ],
+      "imports": [],
+      "updatedAt": 1780849488534
+    },
+    "frontend/src/components/SettingsForm/SettingsForm.jsx": {
+      "path": "frontend/src/components/SettingsForm/SettingsForm.jsx",
+      "hash": "b3bb5aa2a8cbaee96d8a5b7f4323e3573fb42d0d1cc62ba066a2d231c54e9447",
+      "bytes": 2778,
+      "summary": "该React用户设置表单组件，校验登录态，支持编辑头像、用户名等信息，提交后调用接口更新用户资料",
+      "tags": [
+        "react",
+        "form",
+        "用户设置",
+        "表单提交",
+        "状态管理",
+        "路由导航"
+      ],
+      "symbols": [
+        "SettingsForm",
+        "inputHandler",
+        "formSubmit"
+      ],
+      "imports": [
+        "import { useEffect, useState } from \"react\";",
+        "import { useNavigate } from \"react-router-dom\";",
+        "import { useAuth } from \"../../context/AuthContext\";",
+        "import userUpdate from \"../../services/userUpdate\";",
+        "import FormFieldset from \"../FormFieldset\";"
+      ],
+      "updatedAt": 1780849490411
+    },
+    "frontend/src/components/SettingsForm/index.js": {
+      "path": "frontend/src/components/SettingsForm/index.js",
+      "hash": "90714005ff28646e26a10f043223f334ed1997d60e91697d98af44f0d0b4c9aa",
+      "bytes": 43,
+      "summary": "该文件是SettingsForm设置表单组件的入口文件，重导出同目录下的SettingsForm组件，简化外部引入路径。",
+      "tags": [
+        "组件入口",
+        "重导出",
+        "react组件",
+        "设置表单",
+        "前端组件"
+      ],
+      "symbols": [
+        "default"
+      ],
+      "imports": [],
+      "updatedAt": 1780849491182
+    },
+    "frontend/src/components/SignUpForm/SignUpForm.jsx": {
+      "path": "frontend/src/components/SignUpForm/SignUpForm.jsx",
+      "hash": "1f5e97f89306ec9b8635aa641a08811d821bcad2732ca46429c335c00033f21d",
+      "bytes": 1597,
+      "summary": "实现用户注册表单，收集用户名、邮箱、密码，提交后调用注册接口更新认证状态跳转首页，支持传入错误回调",
+      "tags": [
+        "react",
+        "注册表单",
+        "前端组件",
+        "表单处理",
+        "用户认证",
+        "路由跳转"
+      ],
+      "symbols": [
+        "SignUpForm"
+      ],
+      "imports": [
+        "import { useState } from \"react\";",
+        "import { useNavigate } from \"react-router-dom\";",
+        "import { useAuth } from \"../../context/AuthContext\";",
+        "import userSignUp from \"../../services/userSignUp\";",
+        "import FormFieldset from \"../FormFieldset\";"
+      ],
+      "updatedAt": 1780849493001
+    },
+    "frontend/src/components/SignUpForm/index.js": {
+      "path": "frontend/src/components/SignUpForm/index.js",
+      "hash": "8c7fab2bc2c47f7164f9aa460231db2f57e6be8ef9fe354cb7d9cb2db85625fd",
+      "bytes": 41,
+      "summary": "该文件是注册表单组件的入口模块，重导出同级SignUpForm的默认组件，简化外部导入路径。",
+      "tags": [
+        "react",
+        "组件",
+        "注册表单",
+        "入口文件",
+        "模块导出"
+      ],
+      "symbols": [
+        "default"
+      ],
+      "imports": [],
+      "updatedAt": 1780849495986
+    },
+    "frontend/src/components/SourceCodeLink/SourceCodeLink.jsx": {
+      "path": "frontend/src/components/SourceCodeLink/SourceCodeLink.jsx",
+      "hash": "c3bb33c64386549f249c8752212f1421272d8709b9397ee2d195a9ae21b26aa7",
+      "bytes": 482,
+      "summary": "该React组件接收left、right属性控制对齐位置，渲染指向项目GitHub源码仓库的导航链接",
+      "tags": [
+        "react组件",
+        "导航链接",
+        "github跳转",
+        "位置控制",
+        "ui组件"
+      ],
+      "symbols": [
+        "SourceCodeLink"
+      ],
+      "imports": [],
+      "updatedAt": 1780849492170
+    },
+    "frontend/src/components/SourceCodeLink/index.js": {
+      "path": "frontend/src/components/SourceCodeLink/index.js",
+      "hash": "23fb36dcbfb02f8f1d8432daf427725e1c187aa3287be648e34a21fd3890fd8f",
+      "bytes": 45,
+      "summary": "该文件是SourceCodeLink组件的入口文件，通过重导出同目录下的组件默认值，简化外部引入路径。",
+      "tags": [
+        "组件入口",
+        "重导出",
+        "react组件",
+        "前端"
+      ],
+      "symbols": [
+        "SourceCodeLink"
+      ],
+      "imports": [],
+      "updatedAt": 1780849493227
+    },
+    "frontend/src/context/AuthContext.jsx": {
+      "path": "frontend/src/context/AuthContext.jsx",
+      "hash": "75eb3ae0c5c52f97fb8ff3a5e7893aacabe2a5b0ce950442784b7a7279564b85",
+      "bytes": 1013,
+      "summary": "该文件创建React全局认证上下文，维护登录态、用户信息与请求头，封装useAuth钩子，同步本地存储登录状态",
+      "tags": [
+        "react",
+        "auth context",
+        "状态管理",
+        "用户认证",
+        "hooks",
+        "前端"
+      ],
+      "symbols": [
+        "AuthContext",
+        "useAuth",
+        "AuthProvider"
+      ],
+      "imports": [
+        "import { createContext, useContext, useEffect, useState } from \"react\";",
+        "import getUser from \"../services/getUser\";"
+      ],
+      "updatedAt": 1780849497311
+    },
+    "frontend/src/context/FeedContext.jsx": {
+      "path": "frontend/src/context/FeedContext.jsx",
+      "hash": "c68a01996481f42b5ce7d0488b0e5738a386e8a35c65a1d0dc56aed497dd050b",
+      "bytes": 846,
+      "summary": "该文件实现React内容流全局上下文，管理当前选中tab、标签名，依赖登录状态自动切换默认流，提供tab切换方法",
+      "tags": [
+        "react",
+        "context",
+        "状态管理",
+        "feed流",
+        "前端",
+        "hooks"
+      ],
+      "symbols": [
+        "FeedContext",
+        "useFeedContext",
+        "FeedProvider"
+      ],
+      "imports": [
+        "import { createContext, useContext, useEffect, useState } from \"react\";",
+        "import { useAuth } from \"./AuthContext\";"
+      ],
+      "updatedAt": 1780849495480
+    },
+    "frontend/src/helpers/dateFormatter.js": {
+      "path": "frontend/src/helpers/dateFormatter.js",
+      "hash": "95d4119232e4f48e4848ef04c940650ff08d40b02552e3f5db72b987e961c1c0",
+      "bytes": 172,
+      "summary": "该文件导出日期格式化工具函数，将输入日期转换为英文区域下带长月份的完整年月日格式本地化日期字符串",
+      "tags": [
+        "日期格式化",
+        "工具函数",
+        "前端helper",
+        "javascript",
+        "日期处理"
+      ],
+      "symbols": [
+        "dateFormatter"
+      ],
+      "imports": [],
+      "updatedAt": 1780849494800
+    },
+    "frontend/src/helpers/dateFormatter.test.js": {
+      "path": "frontend/src/helpers/dateFormatter.test.js",
+      "hash": "6bff75570701f6f09671a74c994e7e532e915f6c6695e94f0f33a417a6ff3cf7",
+      "bytes": 208,
+      "summary": "该文件是日期格式化工具dateFormatter的单元测试，校验输入ISO时间串时是否正确输出指定格式的可读日期",
+      "tags": [
+        "jest",
+        "单元测试",
+        "日期格式化",
+        "前端测试",
+        "工具函数测试"
+      ],
+      "symbols": [
+        "dateFormatter"
+      ],
+      "imports": [
+        "import dateFormatter from \"./dateFormatter\";"
+      ],
+      "updatedAt": 1780849497083
+    },
+    "frontend/src/helpers/errorHandler.js": {
+      "path": "frontend/src/helpers/errorHandler.js",
+      "hash": "3ed8b1c152b3654ef08fcd402f91fd1d5c8269f48f8a4c0e1336a5bf90822f8a",
+      "bytes": 336,
+      "summary": "该文件导出请求错误处理工具函数，校验接口响应状态码，打印错误日志并抛出对应业务错误信息",
+      "tags": [
+        "前端工具",
+        "错误处理",
+        "请求异常",
+        "日志打印",
+        "工具函数"
+      ],
+      "symbols": [
+        "errorHandler"
+      ],
+      "imports": [],
+      "updatedAt": 1780849498696
+    },
+    "frontend/src/helpers/errorHandler.test.js": {
+      "path": "frontend/src/helpers/errorHandler.test.js",
+      "hash": "84af1f826005f2a3a1df1f4b85492cc7734de71a4d8be95d053bac192bc7dd34",
+      "bytes": 364,
+      "summary": "该文件是errorHandler工具的单元测试，验证传入携带指定HTTP错误状态码的对象时，函数是否正常抛出异常",
+      "tags": [
+        "jest",
+        "unit test",
+        "error handling",
+        "frontend",
+        "http status"
+      ],
+      "symbols": [
+        "errorHandler"
+      ],
+      "imports": [
+        "import errorHandler from \"./errorHandler\";"
+      ],
+      "updatedAt": 1780849501493
+    },
+    "frontend/src/hooks/useArticles.js": {
+      "path": "frontend/src/hooks/useArticles.js",
+      "hash": "a5fe3db89d7c2509c1ab9f0ce37c38af9c81cd7300384adb4cf35e95229121f0",
+      "bytes": 843,
+      "summary": "该React自定义Hook根据传入的位置、标签等参数拉取文章，返回文章列表、总数、加载态及数据更新方法",
+      "tags": [
+        "react hook",
+        "文章列表",
+        "数据请求",
+        "状态管理",
+        "前端"
+      ],
+      "symbols": [
+        "useArticles"
+      ],
+      "imports": [
+        "import { useEffect, useState } from \"react\";",
+        "import { useAuth } from \"../context/AuthContext\";",
+        "import getArticles from \"../services/getArticles\";"
+      ],
+      "updatedAt": 1780849498717
+    },
+    "frontend/src/index.css": {
+      "path": "frontend/src/index.css",
+      "hash": "a63935b1240642c9923d736ef9c705a8acde46f5df209bb949c292cafbe76cee",
+      "bytes": 399,
+      "summary": "全局基础CSS文件，定义分页、吸顶头部、按钮聚焦重置、通用指针、404页面的公共样式规则",
+      "tags": [
+        "css",
+        "全局样式",
+        "样式重置",
+        "公共样式",
+        "前端样式",
+        "通用类"
+      ],
+      "symbols": [
+        ".pagination",
+        "header",
+        "button:focus",
+        ".cursor-pointer",
+        ".not-found"
+      ],
+      "imports": [],
+      "updatedAt": 1780849499703
+    },
+    "frontend/src/main.jsx": {
+      "path": "frontend/src/main.jsx",
+      "hash": "da408ab29e032ecfbdf2a57e8d02617c106a03433051c398c7b829688511d915",
+      "bytes": 2454,
+      "summary": "React应用入口文件，挂载根DOM节点，配置全量路由规则、注入全局认证上下文，引入全局样式并启动性能上报",
+      "tags": [
+        "react",
+        "entry file",
+        "route config",
+        "auth provider",
+        "spa",
+        "前端初始化"
+      ],
+      "symbols": [
+        "ReactDOM",
+        "HashRouter",
+        "AuthProvider",
+        "Routes",
+        "App",
+        "reportWebVitals"
+      ],
+      "imports": [
+        "import React from \"react\";",
+        "import ReactDOM from \"react-dom/client\";",
+        "import { HashRouter, Route, Routes } from \"react-router-dom\";",
+        "import App from \"./App\";",
+        "import AuthProvider from \"./context/AuthContext\";",
+        "import \"./styles.css\";",
+        "import \"./index.css\";",
+        "import reportWebVitals from \"./reportWebVitals\";"
+      ],
+      "updatedAt": 1780850777003
+    },
+    "frontend/src/reportWebVitals.js": {
+      "path": "frontend/src/reportWebVitals.js",
+      "hash": "5efbb84cbed52b82cab1165c816c92390b0a5d752e490ca564172a14e3a84a6d",
+      "bytes": 375,
+      "summary": "定义Web性能上报函数，校验入参为有效函数后异步加载web-vitals库，采集五大核心性能指标传入回调执行",
+      "tags": [
+        "web-vitals",
+        "性能监控",
+        "前端埋点",
+        "react",
+        "性能指标"
+      ],
+      "symbols": [
+        "reportWebVitals"
+      ],
+      "imports": [],
+      "updatedAt": 1780849501150
+    },
+    "frontend/src/routes/Article/Article.jsx": {
+      "path": "frontend/src/routes/Article/Article.jsx",
+      "hash": "396d8784915217eb2555afcb2a671b0482d1786a27ebfeb55c44420f0929d9c3",
+      "bytes": 1997,
+      "summary": "该React文章详情组件，优先读取路由状态缓存，无缓存时按slug拉取文章数据，渲染内容、元信息并支持嵌套路由",
+      "tags": [
+        "react",
+        "jsx",
+        "文章详情",
+        "前端组件",
+        "markdown渲染",
+        "路由处理"
+      ],
+      "symbols": [
+        "Article"
+      ],
+      "imports": [
+        "import Markdown from \"markdown-to-jsx\";",
+        "import { useEffect, useState } from \"react\";",
+        "import { Outlet, useLocation, useNavigate, useParams } from \"react-router-dom\";",
+        "import ArticleMeta from \"../../components/ArticleMeta\";",
+        "import ArticlesButtons from \"../../components/ArticlesButtons\";",
+        "import ArticleTags from \"../../components/ArticleTags\";",
+        "import BannerContainer from \"../../components/BannerContainer\";",
+        "import { useAuth } from \"../../context/AuthContext\";"
+      ],
+      "updatedAt": 1780849507514
+    },
+    "frontend/src/routes/Article/CommentsSection.jsx": {
+      "path": "frontend/src/routes/Article/CommentsSection.jsx",
+      "hash": "565c4529374a5b61464ed71e4872eed11918f9e207a0aa1275fabf61d7f6200e",
+      "bytes": 599,
+      "summary": "该React组件是文章页评论区容器，维护评论状态，联动评论编辑、评论列表子组件实现评论相关交互",
+      "tags": [
+        "react",
+        "jsx",
+        "评论区",
+        "前端组件",
+        "文章页",
+        "状态管理"
+      ],
+      "symbols": [
+        "CommentsSection",
+        "handleUpdates"
+      ],
+      "imports": [
+        "import { useState } from \"react\";",
+        "import CommentEditor from \"../../components/CommentEditor\";",
+        "import CommentList from \"../../components/CommentList\";"
+      ],
+      "updatedAt": 1780850542518
+    },
+    "frontend/src/routes/ArticleEditor.jsx": {
+      "path": "frontend/src/routes/ArticleEditor.jsx",
+      "hash": "15e2be4167f3b22d0a074c537a51d1d5262aece1cb05757c4c1fa4ddc895850d",
+      "bytes": 418,
+      "summary": "该文件是文章编辑器路由页组件，引入布局容器与编辑表单，搭建编辑器页面的基础展示结构。",
+      "tags": [
+        "react",
+        "jsx",
+        "前端",
+        "路由组件",
+        "文章编辑"
+      ],
+      "symbols": [
+        "ArticleEditor"
+      ],
+      "imports": [
+        "import ArticleEditorForm from \"../components/ArticleEditorForm\";",
+        "import ContainerRow from \"../components/ContainerRow\";"
+      ],
+      "updatedAt": 1780849504776
+    },
+    "frontend/src/routes/Home.jsx": {
+      "path": "frontend/src/routes/Home.jsx",
+      "hash": "c9dda0aeeee42f274b2cb9bd003409b587db97e95554e2c05254b3ef12aee0ab",
+      "bytes": 952,
+      "summary": "实现Conduit平台首页路由组件，根据登录态控制展示欢迎横幅，嵌套Feed上下文渲染内容区与热门标签侧边栏",
+      "tags": [
+        "react",
+        "jsx",
+        "首页组件",
+        "路由组件",
+        "上下文注入",
+        "前端"
+      ],
+      "symbols": [
+        "Home"
+      ],
+      "imports": [
+        "import { Outlet } from \"react-router-dom\";",
+        "import BannerContainer from \"../components/BannerContainer\";",
+        "import ContainerRow from \"../components/ContainerRow\";",
+        "import FeedToggler from \"../components/FeedToggler\";",
+        "import { useAuth } from \"../context/AuthContext\";",
+        "import FeedProvider from \"../context/FeedContext\";",
+        "import PopularTags from \"./../components/PopularTags\";"
+      ],
+      "updatedAt": 1780849506458
+    },
+    "frontend/src/routes/HomeArticles.jsx": {
+      "path": "frontend/src/routes/HomeArticles.jsx",
+      "hash": "cd909b1100429b92f7f4dfa24b91482584f7a1006e36db8b1caa1ea251ffc0b9",
+      "bytes": 1051,
+      "summary": "首页文章路由组件，读取Feed上下文参数调用文章列表钩子，根据状态渲染加载提示、文章预览、分页或空内容",
+      "tags": [
+        "react",
+        "jsx",
+        "文章列表",
+        "首页组件",
+        "路由页面",
+        "前端组件"
+      ],
+      "symbols": [
+        "HomeArticles"
+      ],
+      "imports": [
+        "import ArticlesPagination from \"../components/ArticlesPagination\";",
+        "import ArticlesPreview from \"../components/ArticlesPreview\";",
+        "import { useFeedContext } from \"../context/FeedContext\";",
+        "import useArticleList from \"../hooks/useArticles\";"
+      ],
+      "updatedAt": 1780849508358
+    },
+    "frontend/src/routes/Login.jsx": {
+      "path": "frontend/src/routes/Login.jsx",
+      "hash": "7a81e4bb6a1b857c5daf45a34d5f4cdc671f0468145593e30ad3c20c47686511",
+      "bytes": 555,
+      "summary": "该React登录路由页面维护错误消息状态，嵌套认证页容器与登录表单，配置跳转注册页的关联入口",
+      "tags": [
+        "react",
+        "login page",
+        "frontend route",
+        "jsx",
+        "状态管理",
+        "登录模块"
+      ],
+      "symbols": [
+        "Login",
+        "useState",
+        "handleError",
+        "AuthPageContainer",
+        "LoginForm"
+      ],
+      "imports": [
+        "import { useState } from \"react\";",
+        "import AuthPageContainer from \"../components/AuthPageContainer\";",
+        "import LoginForm from \"../components/LoginForm\";"
+      ],
+      "updatedAt": 1780849508450
+    },
+    "frontend/src/routes/NotFound.jsx": {
+      "path": "frontend/src/routes/NotFound.jsx",
+      "hash": "9195defb91003f687366f0b6614c2416688dcd3f1a5cbc6e4aaa8c326e06855b",
+      "bytes": 234,
+      "summary": "该文件实现React路由404兜底页面组件，展示404提示信息，提供跳转首页的导航链接",
+      "tags": [
+        "react",
+        "404页面",
+        "路由组件",
+        "jsx",
+        "react-router-dom",
+        "前端"
+      ],
+      "symbols": [
+        "NotFound"
+      ],
+      "imports": [
+        "import { Link } from \"react-router-dom\";"
+      ],
+      "updatedAt": 1780849510196
+    },
+    "frontend/src/routes/Profile/Profile.jsx": {
+      "path": "frontend/src/routes/Profile/Profile.jsx",
+      "hash": "c221faedb3bd94889c3d690d4cb59aace36f3959a49e36a24b02fdd2ff5cb784",
+      "bytes": 937,
+      "summary": "该组件是个人资料页路由组件，获取路由位置状态，渲染用户信息、文章切换导航，通过Outlet挂载子路由内容",
+      "tags": [
+        "react",
+        "jsx",
+        "路由组件",
+        "个人资料页",
+        "页面布局",
+        "用户中心"
+      ],
+      "symbols": [
+        "Profile"
+      ],
+      "imports": [
+        "import { Outlet, useLocation } from \"react-router-dom\";",
+        "import AuthorInfo from \"../../components/AuthorInfo\";",
+        "import ContainerRow from \"../../components/ContainerRow\";",
+        "import NavItem from \"../../components/NavItem\";"
+      ],
+      "updatedAt": 1780849511956
+    },
+    "frontend/src/routes/Profile/ProfileArticles.jsx": {
+      "path": "frontend/src/routes/Profile/ProfileArticles.jsx",
+      "hash": "73cfbd7326979fd9854727f1baeb1be731b23a29283ab001c3f69d658aedc34e",
+      "bytes": 1049,
+      "summary": "该组件从路由获取用户名，调用文章列表钩子，渲染对应用户的文章预览、分页，处理加载与空状态",
+      "tags": [
+        "react",
+        "jsx",
+        "用户主页",
+        "文章列表",
+        "分页渲染",
+        "路由参数"
+      ],
+      "symbols": [
+        "ProfileArticles"
+      ],
+      "imports": [
+        "import { useParams } from \"react-router-dom\";",
+        "import ArticlesPagination from \"../../components/ArticlesPagination\";",
+        "import ArticlesPreview from \"../../components/ArticlesPreview\";",
+        "import useArticleList from \"../../hooks/useArticles\";"
+      ],
+      "updatedAt": 1780849512909
+    },
+    "frontend/src/routes/Profile/ProfileFavArticles.jsx": {
+      "path": "frontend/src/routes/Profile/ProfileFavArticles.jsx",
+      "hash": "4dc4d17439f54c4fc47e9bb0eafe2094f4babe4aee80493a813416c5a2411c2a",
+      "bytes": 1070,
+      "summary": "该组件获取路由用户名参数，拉取对应用户的收藏文章列表，处理加载/空状态，渲染文章预览与分页组件",
+      "tags": [
+        "react",
+        "前端组件",
+        "个人主页",
+        "收藏文章",
+        "文章分页",
+        "react-router"
+      ],
+      "symbols": [
+        "ProfileFavArticles"
+      ],
+      "imports": [
+        "import { useParams } from \"react-router-dom\";",
+        "import ArticlesPagination from \"../../components/ArticlesPagination\";",
+        "import ArticlesPreview from \"../../components/ArticlesPreview\";",
+        "import useArticleList from \"../../hooks/useArticles\";"
+      ],
+      "updatedAt": 1780849512805
+    },
+    "frontend/src/routes/Settings.jsx": {
+      "path": "frontend/src/routes/Settings.jsx",
+      "hash": "cbcda3094c5da82b1b0028a12a7ebd886476a1be46e0e04d85b75bcdfd8a41bb",
+      "bytes": 455,
+      "summary": "该React设置页路由组件，渲染居中布局的页面容器，展示标题并嵌入SettingsForm设置表单",
+      "tags": [
+        "react",
+        "jsx",
+        "设置页",
+        "路由组件",
+        "前端页面"
+      ],
+      "symbols": [
+        "Settings"
+      ],
+      "imports": [
+        "import ContainerRow from \"../components/ContainerRow\";",
+        "import SettingsForm from \"../components/SettingsForm\";"
+      ],
+      "updatedAt": 1780849512318
+    },
+    "frontend/src/routes/SignUp.jsx": {
+      "path": "frontend/src/routes/SignUp.jsx",
+      "hash": "76482c4b6e52c792f1c2f8398ea82e67ed87166cabb6a85fb49b88bc76b85904",
+      "bytes": 564,
+      "summary": "该React注册页路由组件维护错误状态，通过回调传递错误信息，嵌套渲染认证容器与注册表单",
+      "tags": [
+        "react",
+        "注册页面",
+        "路由组件",
+        "前端组件",
+        "认证模块"
+      ],
+      "symbols": [
+        "SignUp",
+        "handleError"
+      ],
+      "imports": [
+        "import { useState } from \"react\";",
+        "import AuthPageContainer from \"../components/AuthPageContainer\";",
+        "import SignUpForm from \"../components/SignUpForm\";"
+      ],
+      "updatedAt": 1780849516903
+    },
+    "frontend/src/services/deleteArticle.js": {
+      "path": "frontend/src/services/deleteArticle.js",
+      "hash": "8de1aaac24130abebce8c779c9693d047832f1dc982bb68dd6f733c681881c49",
+      "bytes": 374,
+      "summary": "该文件导出异步删除文章服务函数，通过axios发送DELETE请求，传入文章slug与请求头，异常交由统一错误处理器处理",
+      "tags": [
+        "article delete",
+        "axios",
+        "frontend service",
+        "http request",
+        "error handling",
+        "文章操作"
+      ],
+      "symbols": [
+        "deleteArticle"
+      ],
+      "imports": [
+        "import axios from \"axios\";",
+        "import errorHandler from \"../helpers/errorHandler\";"
+      ],
+      "updatedAt": 1780849516009
+    },
+    "frontend/src/services/deleteComment.js": {
+      "path": "frontend/src/services/deleteComment.js",
+      "hash": "8a66e7c3aa4626cd039b2648a3e510cc4aa191501f416b805ed6952512a269da",
+      "bytes": 406,
+      "summary": "导出异步删除评论服务函数，通过axios发送DELETE请求调用对应后端接口，捕获异常后交由统一错误处理器处理",
+      "tags": [
+        "axios",
+        "删除评论",
+        "接口请求",
+        "前端服务",
+        "异步函数"
+      ],
+      "symbols": [
+        "deleteComment"
+      ],
+      "imports": [
+        "import axios from \"axios\";",
+        "import errorHandler from \"../helpers/errorHandler\";"
+      ],
+      "updatedAt": 1780849512832
+    },
+    "frontend/src/services/getArticle.js": {
+      "path": "frontend/src/services/getArticle.js",
+      "hash": "2e588294ab0a2221caec9e5c0d5584759a6f5ab7ce19907b688601de1e1a2c1c",
+      "bytes": 330,
+      "summary": "导出异步请求函数，传入请求头与文章slug，调用后端接口获取单篇文章数据，异常时走统一错误处理",
+      "tags": [
+        "axios",
+        "文章接口",
+        "异步请求",
+        "前端服务",
+        "错误处理"
+      ],
+      "symbols": [
+        "getArticle"
+      ],
+      "imports": [
+        "import axios from \"axios\";",
+        "import errorHandler from \"../helpers/errorHandler\";"
+      ],
+      "updatedAt": 1780849515528
+    },
+    "frontend/src/services/getArticles.js": {
+      "path": "frontend/src/services/getArticles.js",
+      "hash": "18fac75f485be731f9898958dad018c00494e17fe39461ec47a9fef6eeb5273d",
+      "bytes": 781,
+      "summary": "封装获取文章列表的异步请求服务，根据location等参数拼接对应接口调用axios，异常统一交由错误处理器处理",
+      "tags": [
+        "axios",
+        "文章接口",
+        "请求封装",
+        "前端服务",
+        "错误处理"
+      ],
+      "symbols": [
+        "getArticles"
+      ],
+      "imports": [
+        "import axios from \"axios\";",
+        "import errorHandler from \"../helpers/errorHandler\";"
+      ],
+      "updatedAt": 1780849520639
+    },
+    "frontend/src/services/getComments.js": {
+      "path": "frontend/src/services/getComments.js",
+      "hash": "32280089cf58db77ad98ee8683cc39d6e1a4f698d586c6b20cd7f4a662d00640",
+      "bytes": 324,
+      "summary": "导出异步请求函数，通过axios调用指定slug的文章评论接口，返回评论数据，异常时走统一错误处理逻辑",
+      "tags": [
+        "frontend",
+        "axios",
+        "api service",
+        "评论接口",
+        "异步请求",
+        "错误处理"
+      ],
+      "symbols": [
+        "getComments"
+      ],
+      "imports": [
+        "import axios from \"axios\";",
+        "import errorHandler from \"../helpers/errorHandler\";"
+      ],
+      "updatedAt": 1780849516587
+    },
+    "frontend/src/services/getProfile.js": {
+      "path": "frontend/src/services/getProfile.js",
+      "hash": "8db3693d42478569bb4e537e3ed017f1b70c10b0cf53e7a2bba9c67925c0408c",
+      "bytes": 338,
+      "summary": "导出异步getProfile函数，通过axios请求指定用户名的用户资料接口，捕获异常后调用统一错误处理器处理",
+      "tags": [
+        "axios",
+        "接口请求",
+        "用户资料",
+        "前端服务",
+        "异步函数"
+      ],
+      "symbols": [
+        "getProfile"
+      ],
+      "imports": [
+        "import axios from \"axios\";",
+        "import errorHandler from \"../helpers/errorHandler\";"
+      ],
+      "updatedAt": 1780849519229
+    },
+    "frontend/src/services/getTags.js": {
+      "path": "frontend/src/services/getTags.js",
+      "hash": "deee1ab60fd40de27599b44db637f6f808cbe74fdc43369c5f95a67dbc860dbd",
+      "bytes": 284,
+      "summary": "该文件定义异步请求函数，调用后端/api/tags接口获取标签列表，捕获异常后交由统一错误处理器处理",
+      "tags": [
+        "axios",
+        "http请求",
+        "标签接口",
+        "前端服务层"
+      ],
+      "symbols": [
+        "getTags"
+      ],
+      "imports": [
+        "import axios from \"axios\";",
+        "import errorHandler from \"../helpers/errorHandler\";"
+      ],
+      "updatedAt": 1780849518493
+    },
+    "frontend/src/services/getUser.js": {
+      "path": "frontend/src/services/getUser.js",
+      "hash": "10d0ddbdeef9be257055fc6a9a5cebb1e8882f0762446a58360d2d38bfa99990",
+      "bytes": 303,
+      "summary": "导出异步getUser函数，通过axios请求api/user接口获取用户数据，捕获请求异常后调用统一错误处理器处理",
+      "tags": [
+        "axios",
+        "用户接口",
+        "前端服务",
+        "异步请求",
+        "错误处理"
+      ],
+      "symbols": [
+        "getUser"
+      ],
+      "imports": [
+        "import axios from \"axios\";",
+        "import errorHandler from \"../helpers/errorHandler\";"
+      ],
+      "updatedAt": 1780849518931
+    },
+    "frontend/src/services/postComment.js": {
+      "path": "frontend/src/services/postComment.js",
+      "hash": "70dc7a2320ed55da82ac4800ffa39f534310554a52253270b9ec4c7055018f90",
+      "bytes": 426,
+      "summary": "导出异步postComment函数，发起POST请求提交指定slug文章的评论，捕获异常后调用统一错误处理器处理",
+      "tags": [
+        "axios",
+        "评论服务",
+        "接口请求",
+        "异步函数",
+        "错误处理",
+        "前端service"
+      ],
+      "symbols": [
+        "postComment"
+      ],
+      "imports": [
+        "import axios from \"axios\";",
+        "import errorHandler from \"../helpers/errorHandler\";"
+      ],
+      "updatedAt": 1780849521194
+    },
+    "frontend/src/services/setArticle.js": {
+      "path": "frontend/src/services/setArticle.js",
+      "hash": "60133da53706c3c2aa71fe22f217e30adf21870380ccfae556de54a8d64b9318",
+      "bytes": 517,
+      "summary": "导出异步setArticle函数，通过axios调用后端接口，支持新建或更新文章，异常统一处理，返回对应文章的slug标识",
+      "tags": [
+        "axios",
+        "文章管理",
+        "接口请求",
+        "前端服务",
+        "异步函数"
+      ],
+      "symbols": [
+        "setArticle"
+      ],
+      "imports": [
+        "import axios from \"axios\";",
+        "import errorHandler from \"../helpers/errorHandler\";"
+      ],
+      "updatedAt": 1780849522799
+    },
+    "frontend/src/services/toggleFav.js": {
+      "path": "frontend/src/services/toggleFav.js",
+      "hash": "ce5516c13e8ccbd5628f86ded68f4f55eb647ea1edf0b9481f71307d24cfd02a",
+      "bytes": 414,
+      "summary": "导出异步切换文章收藏状态的服务函数，根据当前收藏状态选POST/DELETE调用对应接口，异常走统一错误处理",
+      "tags": [
+        "axios",
+        "文章收藏",
+        "接口请求",
+        "前端服务",
+        "异步函数"
+      ],
+      "symbols": [
+        "toggleFav"
+      ],
+      "imports": [
+        "import axios from \"axios\";",
+        "import errorHandler from \"../helpers/errorHandler\";"
+      ],
+      "updatedAt": 1780849524333
+    },
+    "frontend/src/services/toggleFollow.js": {
+      "path": "frontend/src/services/toggleFollow.js",
+      "hash": "5808043ca1d3e38d52fdb2dca0513662036a4999cf066e8a819be4831258aa99",
+      "bytes": 426,
+      "summary": "导出切换用户关注状态的异步请求函数，依据following参数动态选POST/DELETE调用对应后端接口，异常统一处理",
+      "tags": [
+        "axios",
+        "接口请求",
+        "关注功能",
+        "前端服务",
+        "异步函数"
+      ],
+      "symbols": [
+        "toggleFollow"
+      ],
+      "imports": [
+        "import axios from \"axios\";",
+        "import errorHandler from \"../helpers/errorHandler\";"
+      ],
+      "updatedAt": 1780849523351
+    },
+    "frontend/src/services/userLogin.js": {
+      "path": "frontend/src/services/userLogin.js",
+      "hash": "97de16bfa7b13da7f718738ad481add134e28793d74301d4692d52dccd03af85",
+      "bytes": 623,
+      "summary": "封装用户登录POST接口请求，成功后将带Token鉴权头的登录态存入localStorage，异常交由统一错误处理器处理",
+      "tags": [
+        "axios",
+        "用户登录",
+        "接口请求",
+        "localStorage",
+        "错误处理",
+        "前端服务"
+      ],
+      "symbols": [
+        "userLogin"
+      ],
+      "imports": [
+        "import axios from \"axios\";",
+        "import errorHandler from \"../helpers/errorHandler\";"
+      ],
+      "updatedAt": 1780849523856
+    },
+    "frontend/src/services/userLogout.js": {
+      "path": "frontend/src/services/userLogout.js",
+      "hash": "4091167d2dfe078da1d238957615677d7b7f979758b87bfcfb6798a38ca648f5",
+      "bytes": 282,
+      "summary": "导出用户登出工具函数，清除localStorage中登录用户标识，返回重置后的非认证空用户状态对象",
+      "tags": [
+        "前端服务",
+        "用户登出",
+        "localstorage",
+        "状态重置",
+        "工具函数"
+      ],
+      "symbols": [
+        "userLogout"
+      ],
+      "imports": [],
+      "updatedAt": 1780849523545
+    },
+    "frontend/src/services/userSignUp.js": {
+      "path": "frontend/src/services/userSignUp.js",
+      "hash": "2baf926b6b597462312ff302147ada47e10fbb630daf8c2a68e9bc176cf45bc8",
+      "bytes": 639,
+      "summary": "封装用户注册POST接口请求，提交账号信息，成功后将带鉴权头的登录态存入localStorage，异常走统一错误处理",
+      "tags": [
+        "user signup",
+        "axios",
+        "接口请求",
+        "登录态存储",
+        "错误处理",
+        "前端服务"
+      ],
+      "symbols": [
+        "userSignUp"
+      ],
+      "imports": [
+        "import axios from \"axios\";",
+        "import errorHandler from \"../helpers/errorHandler\";"
+      ],
+      "updatedAt": 1780849524954
+    },
+    "frontend/src/services/userUpdate.js": {
+      "path": "frontend/src/services/userUpdate.js",
+      "hash": "6aa7121b141b3e9f89525cc42f2847b0f8b3f62bb0e07c5c33365dae1f8e2304",
+      "bytes": 623,
+      "summary": "封装用户信息更新异步请求，调用PUT接口提交修改数据，成功后更新本地登录态，异常走统一错误处理",
+      "tags": [
+        "axios",
+        "user service",
+        "用户更新",
+        "接口请求",
+        "localstorage",
+        "错误处理",
+        "前端服务"
+      ],
+      "symbols": [
+        "userUpdate"
+      ],
+      "imports": [
+        "import axios from \"axios\";",
+        "import errorHandler from \"../helpers/errorHandler\";"
+      ],
+      "updatedAt": 1780849527487
+    },
+    "frontend/src/setupTests.js": {
+      "path": "frontend/src/setupTests.js",
+      "hash": "5b046dc1f7f852f3a5f32c039e8ad6a4730ad9ad4369b1b15e749ed9a5f76fae",
+      "bytes": 246,
+      "summary": "前端测试前置配置文件，导入jest-dom库扩展Jest的DOM节点断言匹配能力，为单元测试提供扩展断言方法。",
+      "tags": [
+        "jest",
+        "test setup",
+        "testing-library",
+        "单元测试",
+        "前端测试",
+        "断言扩展"
+      ],
+      "symbols": [
+        "@testing-library/jest-dom"
+      ],
+      "imports": [
+        "import \"@testing-library/jest-dom\";"
+      ],
+      "updatedAt": 1780849528208
+    },
+    "frontend/src/styles.css": {
+      "path": "frontend/src/styles.css",
+      "hash": "c1f0c6c37b621be16ce28ae85899e3329b2c7d9100678cd35771390164960084",
+      "bytes": 30376,
+      "summary": "Conduit项目精简全局CSS，定义设计变量、基础重置规则、布局、表单、按钮等全项目通用UI样式类",
+      "tags": [
+        "css",
+        "全局样式",
+        "ui组件",
+        "响应式布局",
+        "css变量",
+        "样式重置",
+        "前端通用样式"
+      ],
+      "symbols": [
+        ":root",
+        "container",
+        "btn",
+        "form-control",
+        "navbar",
+        "pagination",
+        "tag-list",
+        "article-preview"
+      ],
+      "imports": [],
+      "updatedAt": 1780849530541
+    },
+    "frontend/vite.config.js": {
+      "path": "frontend/vite.config.js",
+      "hash": "05ffbe7122af61093c37681fe9bfc6baea98bc9ace0cea20a8fa87cf8ed7f2f4",
+      "bytes": 266,
+      "summary": "该文件是Vite前端项目配置，引入SWC React插件，指定开发端口3000，将/api请求代理到本地3001后端服务",
+      "tags": [
+        "vite",
+        "react",
+        "前端配置",
+        "开发代理",
+        "前端工程化"
+      ],
+      "symbols": [
+        "defineConfig",
+        "react",
+        "server",
+        "proxy"
+      ],
+      "imports": [
+        "import { defineConfig } from 'vite'",
+        "import react from '@vitejs/plugin-react-swc'"
+      ],
+      "updatedAt": 1780849528763
+    },
+    "package.json": {
+      "path": "package.json",
+      "hash": "117fa6600c0777c7670561cd8a6932e2025ed8420947f007c71c484143820029",
+      "bytes": 1097,
+      "summary": "Conduit全栈示例项目的根npm配置文件，声明monorepo工作区、公共运行脚本与全局开发依赖。",
+      "tags": [
+        "package.json",
+        "monorepo",
+        "fullstack",
+        "realworld",
+        "npm",
+        "conduit",
+        "vitest"
+      ],
+      "symbols": [
+        "dev",
+        "sqlz",
+        "start",
+        "test",
+        "workspaces"
+      ],
+      "imports": [],
+      "updatedAt": 1780849531274
+    },
+    "vitest.config.js": {
+      "path": "vitest.config.js",
+      "hash": "9aec23e8209ebc2344a78e1fb8a4bdc041805aa22caa7a66dbc093e737d49f76",
+      "bytes": 273,
+      "summary": "该文件为Vitest测试配置，引入React SWC插件，配置jsdom测试环境、全局测试API、初始化文件，启用CSS支持",
+      "tags": [
+        "vitest",
+        "vite",
+        "单元测试",
+        "react",
+        "jsdom",
+        "测试配置"
+      ],
+      "symbols": [
+        "defineConfig",
+        "react",
+        "default"
+      ],
+      "imports": [
+        "import react from \"@vitejs/plugin-react-swc\";",
+        "import { defineConfig } from \"vite\";"
+      ],
+      "updatedAt": 1780849532454
+    },
+    "backend/migrations/20240520000000-add-article-status-field.js": {
+      "path": "backend/migrations/20240520000000-add-article-status-field.js",
+      "hash": "c1b7b7438094fc7be5b796804d40ed24e3f15d973fac377d80aa999f75a01a25",
+      "bytes": 451,
+      "summary": "该Sequelize迁移脚本为Articles表新增非空文章状态枚举字段，down方法支持回滚删除该字段",
+      "tags": [
+        "sequelize",
+        "数据库迁移",
+        "字段新增",
+        "文章表",
+        "回滚脚本"
+      ],
+      "symbols": [
+        "up",
+        "down"
+      ],
+      "imports": [],
+      "updatedAt": 1780850774662
+    },
+    "frontend/src/routes/Profile/ProfileDraftsArticles.jsx": {
+      "path": "frontend/src/routes/Profile/ProfileDraftsArticles.jsx",
+      "hash": "7f4567125f3ccb86ff58128220a447fea9309a59e522a88e75be6f622dfc5cc7",
+      "bytes": 2307,
+      "summary": "该React组件是个人页草稿文章列表模块，分页拉取当前用户草稿，处理加载/空态，渲染预览与分页控件",
+      "tags": [
+        "react",
+        "个人中心",
+        "草稿文章",
+        "文章列表",
+        "分页",
+        "前端组件"
+      ],
+      "symbols": [
+        "ProfileDraftsArticles"
+      ],
+      "imports": [
+        "import { useState, useEffect } from 'react';",
+        "import { get } from '../../utils/request';",
+        "import { useAuth } from '../../contexts/AuthContext';",
+        "import ArticlesPreview from '../../components/Articles/ArticlesPreview';",
+        "import ArticlesPagination from '../../components/Articles/ArticlesPagination';",
+        "import Spinner from '../../components/Common/Spinner';"
+      ],
+      "updatedAt": 1780850778923
+    }
+  }
+}

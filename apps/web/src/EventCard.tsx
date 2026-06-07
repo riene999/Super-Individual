@@ -14,6 +14,10 @@ const EVENT_STYLES: Record<string, EventStyle> = {
   "plan.generic":      { title: "Plan generic", icon: "ti-bulb", tone: "gray" },
   "recall.stale":      { title: "Recall stale", icon: "ti-alert-triangle", tone: "warn" },
   "recall.dismissed":  { title: "Recall dismissed", icon: "ti-history-off", tone: "gray" },
+  "spec.ready":        { title: "Code spec ready", icon: "ti-file-check", tone: "success" },
+  "spec.failed":       { title: "Code spec skipped", icon: "ti-file-alert", tone: "warn" },
+  "spec.updated":      { title: "Code spec updated", icon: "ti-file-pencil", tone: "success" },
+  "spec.update_failed": { title: "Code spec update failed", icon: "ti-file-alert", tone: "warn" },
   "aspect.scanned":    { title: "Aspect scanned", icon: "ti-search", tone: "purple" },
   "locate.done":       { title: "Locate done", icon: "ti-folder-search", tone: "gray" },
   "locate.error":      { title: "Locate error", icon: "ti-alert-circle", tone: "danger" },
@@ -97,6 +101,13 @@ function fmtPayload(type: string, payload: Record<string, unknown>): string {
   if (type === "recall.dismissed") {
     return `historicalRunId: ${String(payload.historicalRunId).slice(0, 8)}... · PM ignored this history`;
   }
+  if (type === "spec.ready") {
+    return `files: ${payload.fileCount ?? 0}\nchanged: ${payload.changedCount ?? 0}\nremoved: ${payload.removedCount ?? 0}`;
+  }
+  if (type === "spec.updated") {
+    return `files: ${payload.fileCount ?? 0}\nupdated: ${payload.updatedCount ?? 0}\nremoved: ${payload.removedCount ?? 0}`;
+  }
+  if (type === "spec.failed" || type === "spec.update_failed") return String(payload.message ?? "");
   if (type === "recall.stale") {
     const stale = (payload.stale as string[]) ?? [];
     const valid = (payload.valid as string[]) ?? [];

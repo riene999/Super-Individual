@@ -11,6 +11,7 @@ from pydantic import BaseModel
 
 from orchestrator.events import store as event_store
 from orchestrator.metrics.aggregator import aggregate_global, aggregate_run, compare_runs
+from orchestrator.repo import spec_store
 from orchestrator.repo.conduit import ConduitRepo, REPOS_DIR
 from orchestrator.orchestrator import (
     bus,
@@ -73,7 +74,8 @@ async def list_repos():
                 continue
             for repo_dir in owner_dir.iterdir():
                 if repo_dir.is_dir() and (repo_dir / ".git").exists():
-                    result.append({"nwo": f"{owner_dir.name}/{repo_dir.name}"})
+                    nwo = f"{owner_dir.name}/{repo_dir.name}"
+                    result.append({"nwo": nwo, "spec": spec_store.status(nwo, repo_dir)})
     return result
 
 
@@ -82,7 +84,7 @@ async def setup_repo(body: RepoSetup):
     loop = asyncio.get_event_loop()
     try:
         repo = await loop.run_in_executor(None, ConduitRepo.from_url, body.repoUrl)
-        return {"nwo": repo.upstream_nwo, "status": "ready"}
+        return {"nwo": repo.upstream_nwo, "status": "ready", "spec": spec_store.status(repo.upstream_nwo, repo.repo_path)}
     except Exception as e:
         raise HTTPException(status_code=400, detail=err(str(e)))
 
@@ -92,7 +94,7 @@ async def reset_repo(body: RepoSetup):
     loop = asyncio.get_event_loop()
     try:
         repo = await loop.run_in_executor(None, ConduitRepo.reset_from_url, body.repoUrl)
-        return {"nwo": repo.upstream_nwo, "status": "ready", "reset": True}
+        return {"nwo": repo.upstream_nwo, "status": "ready", "reset": True, "spec": spec_store.status(repo.upstream_nwo, repo.repo_path)}
     except Exception as e:
         raise HTTPException(status_code=400, detail=err(str(e)))
 

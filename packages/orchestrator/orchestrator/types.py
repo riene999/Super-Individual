@@ -65,6 +65,7 @@ class FilePatch:
 class RepoContext:
     repoPath: str
     branch: str
+    codeSpecContext: str | None = None
 
 
 @dataclass

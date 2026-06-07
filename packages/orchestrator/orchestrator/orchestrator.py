@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from orchestrator.agents import clarify, code, locate, plan as plan_agent, verify
+from orchestrator.agents import clarify, code, code_spec, locate, plan as plan_agent, verify
 from orchestrator.agents.aspect_scan import aspect_scan, filter_recall_for_scan
 from orchestrator.agents.generic_plan import generic_plan, generic_skill
 from orchestrator.events import store as event_store
@@ -144,9 +144,19 @@ async def _run_pipeline(run_id: str, raw_text: str, llm, repo) -> None:
         except Exception:
             pass
 
-        run_phase[run_id] = "plan"
+        run_phase[run_id] = "code-spec"
         ctx = repo.get_context()
-        plan_result = await plan_agent.run(analysis_req, ctx, llm)
+        code_spec_context = None
+        try:
+            spec_status = await code_spec.ensure_current(repo, llm, run_id)
+            code_spec_context = code_spec.format_relevant_context(analysis_req, repo)
+            ctx.codeSpecContext = code_spec_context
+            emit_and_broadcast(run_id, "spec.ready", spec_status)
+        except Exception as e:
+            emit_and_broadcast(run_id, "spec.failed", {"message": str(e)})
+
+        run_phase[run_id] = "plan"
+        plan_result = await plan_agent.run(analysis_req, ctx, llm, code_spec_context)
         if plan_result.mode == "generic":
             emit_and_broadcast(
                 run_id,
@@ -233,11 +243,23 @@ async def _run_pipeline(run_id: str, raw_text: str, llm, repo) -> None:
             req = ClarifiedRequest(**{**analysis_req.__dict__, "answers": inferred_answers})
         emit_and_broadcast(run_id, "clarify.done", {"req": _req_payload(req)})
 
-        final_plan = await generic_plan(req, ctx, llm) if plan_result.mode == "generic" else await skill.plan(req, ctx)
+        if plan_result.mode == "generic":
+            code_spec_context = code_spec.format_relevant_context(req, repo)
+            ctx.codeSpecContext = code_spec_context
+            final_plan = await generic_plan(req, ctx, llm, code_spec_context)
+        else:
+            final_plan = await skill.plan(req, ctx)
         run_phase[run_id] = "locate"
         changes = await locate.run(skill, final_plan, ctx)
         emit_and_broadcast(run_id, "locate.done", {"attempt": 1, "files": [f.__dict__ for f in changes.files], "fileCount": len(changes.files)})
         patches = await _run_code_and_verify(run_id, skill, changes, llm, repo)
+
+        run_phase[run_id] = "code-spec:update"
+        try:
+            spec_update = await code_spec.update_files(repo, llm, [p.path for p in patches], run_id)
+            emit_and_broadcast(run_id, "spec.updated", spec_update)
+        except Exception as e:
+            emit_and_broadcast(run_id, "spec.update_failed", {"message": str(e)})
 
         run_phase[run_id] = "commit"
         branch = f"feat/{req.fieldName}-{int(time.time() * 1000)}"

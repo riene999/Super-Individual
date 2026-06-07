@@ -11,6 +11,7 @@ interface RepoPanelProps {
 export default function RepoPanel({ state, onUrlChange, onClone, onReset, resetDisabled = false }: RepoPanelProps) {
   const { repoUrl, nwo, status, error } = state;
   const busy = status === "cloning" || status === "resetting";
+  const specReady = Boolean(state.spec?.currentReady);
 
   return (
     <div className="repo-panel">
@@ -21,6 +22,12 @@ export default function RepoPanel({ state, onUrlChange, onClone, onReset, resetD
           <span className="repo-badge ready">
             <i className="ti ti-circle-check" aria-hidden="true" />
             {nwo}
+          </span>
+        )}
+        {nwo && status === "ready" && (
+          <span className={`repo-badge ${specReady ? "ready" : "pending"}`}>
+            <i className={`ti ${specReady ? "ti-file-check" : "ti-file-description"}`} aria-hidden="true" />
+            {specReady ? `规范 ${state.spec?.fileCount ?? 0}` : "规范待生成"}
           </span>
         )}
       </div>

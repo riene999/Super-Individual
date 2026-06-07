@@ -12,6 +12,10 @@ from orchestrator.types import ClarifiedRequest, RepoContext, SkillPlan
 TOP1_CONFIDENCE_THRESHOLD = 0.5
 TOP1_TOP2_GAP_THRESHOLD = 0.3
 
+# 设为 True 时禁用所有 skill 路由，一律走通用规划（generic_plan）。
+# 改回 False 即可恢复 skill 匹配。
+FORCE_GENERIC = True
+
 
 @dataclass
 class PlanResult:
@@ -89,12 +93,30 @@ async def _run_generic(
     candidates: list[dict[str, float | str]],
     generic_reason: str,
     router_reason: str | None = None,
+    code_spec_context: str | None = None,
 ) -> PlanResult:
-    plan = await generic_plan(req, ctx, llm)
+    effective_code_spec_context = code_spec_context if code_spec_context is not None else getattr(ctx, "codeSpecContext", None)
+    plan = await generic_plan(req, ctx, llm, effective_code_spec_context)
     return PlanResult("generic", None, plan, score, "llm-router", candidates, router_reason, generic_reason)
 
 
-async def run(req: ClarifiedRequest, ctx: RepoContext, llm: LLMClient) -> PlanResult:
+async def run(
+    req: ClarifiedRequest,
+    ctx: RepoContext,
+    llm: LLMClient,
+    code_spec_context: str | None = None,
+) -> PlanResult:
+    if FORCE_GENERIC:
+        return await _run_generic(
+            req,
+            ctx,
+            llm,
+            score=0,
+            candidates=[],
+            generic_reason="skill 路由已禁用（FORCE_GENERIC），一律走通用规划",
+            code_spec_context=code_spec_context,
+        )
+
     scored = await score_all_skills(req)
     candidates = [{"name": cast_skill["skill"].name, "score": float(cast_skill["score"])} for cast_skill in scored]  # type: ignore[attr-defined]
     if not _should_fallback(scored):

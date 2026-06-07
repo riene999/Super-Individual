@@ -8,6 +8,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+from orchestrator.repo import spec_store
 from orchestrator.types import FilePatch, RepoContext
 
 ROOT = Path(__file__).resolve().parents[4]
@@ -233,6 +234,7 @@ class ConduitRepo:
         self._run_git(["checkout", "-B", branch, f"{remote}/{branch}"])
         self._run_git(["reset", "--hard", f"{remote}/{branch}"])
         self._run_git(["clean", "-fd", "-e", "node_modules/", "-e", "frontend/node_modules/", "-e", "backend/node_modules/"])
+        spec_store.restore_current_from_initial(self.upstream_nwo, self.repo_path)
 
     def stage_and_commit(self, message: str, paths: list[str] | None = None) -> None:
         index_lock = self.repo_path / ".git" / "index.lock"

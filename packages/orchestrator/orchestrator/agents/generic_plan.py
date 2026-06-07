@@ -138,7 +138,12 @@ def _fallback_plan(req: ClarifiedRequest, ctx: RepoContext) -> SkillPlan:
     raise RuntimeError("generic plan returned invalid JSON and no deterministic fallback matched")
 
 
-async def generic_plan(req: ClarifiedRequest, ctx: RepoContext, llm: LLMClient) -> SkillPlan:
+async def generic_plan(
+    req: ClarifiedRequest,
+    ctx: RepoContext,
+    llm: LLMClient,
+    code_spec_context: str | None = None,
+) -> SkillPlan:
     result = await llm.chat(
         [
             {"role": "system", "content": "你是资深代码规划助手。只输出严格 JSON，不要输出 markdown 或解释。"},
@@ -154,6 +159,9 @@ async def generic_plan(req: ClarifiedRequest, ctx: RepoContext, llm: LLMClient) 
 
 仓库概览：
 {get_repo_overview(ctx)}
+
+相关代码规范摘要：
+{code_spec_context or "暂无代码规范索引。"}
 
 输出 JSON，格式必须是：
 {{"files":[{{"path":"相对路径","mode":"modify|create","instruction":"具体实现说明"}}]}}

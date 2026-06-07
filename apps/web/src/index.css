@@ -315,6 +315,10 @@ select:focus-visible {
   background: color-mix(in srgb, var(--purple-600) 15%, transparent);
   color: var(--purple-600);
 }
+.repo-badge.pending {
+  background: color-mix(in srgb, var(--warn) 18%, transparent);
+  color: var(--warn-text);
+}
 .repo-panel-row {
   display: flex;
   gap: 8px;

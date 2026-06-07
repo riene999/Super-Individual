@@ -67,6 +67,8 @@ export function useRun() {
         patch.recallSettled = true;
       }
       if (ev.type === "plan.done" || ev.type === "plan.generic") patch.phase = "plan";
+      if (ev.type === "spec.ready") patch.phase = "plan";
+      if (ev.type === "spec.updated") patch.phase = "commit";
       if (ev.type === "locate.done") {
         patch.phase = "code";
         if (!prev.recallSettled) patch.recallSettled = true;
