@@ -23,6 +23,7 @@ const EVENT_STYLES: Record<string, EventStyle> = {
   "verify.failed":     { title: "Verify failed", icon: "ti-shield-x", tone: "danger" },
   "commit.done":       { title: "Commit created", icon: "ti-git-commit", tone: "success" },
   "run.completed":     { title: "Run completed", icon: "ti-circle-check", tone: "success" },
+  "run.cancelled":     { title: "Run stopped", icon: "ti-player-stop", tone: "warn" },
   "run.error":         { title: "Run error", icon: "ti-circle-x", tone: "danger" },
   "run.intervened":    { title: "Replayed", icon: "ti-rewind", tone: "warn" },
   "llm.call":          { title: "LLM call", icon: "ti-robot", tone: "gray" },
@@ -114,6 +115,7 @@ function fmtPayload(type: string, payload: Record<string, unknown>): string {
     return `Exit ${payload.exitCode}\n${String(payload.stderr ?? "").slice(0, 400)}`;
   }
   if (type === "locate.error") return `${payload.reason}\nPath: ${payload.path}\n${payload.message ?? ""}`;
+  if (type === "run.cancelled") return `${payload.message ?? "Run stopped by user."}\nPhase: ${payload.phase ?? "unknown"}`;
   if (type === "run.error") return String(payload.message ?? "");
   if (type === "llm.call") {
     const att = Number(payload.attempt ?? 1);

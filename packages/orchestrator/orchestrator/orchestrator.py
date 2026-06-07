@@ -43,6 +43,7 @@ bus = EventBus()
 pending_answers: dict[str, asyncio.Future[dict[str, str]]] = {}
 run_phase: dict[str, str] = {}
 run_repos: dict[str, ConduitRepo] = {}
+run_tasks: dict[str, asyncio.Task] = {}
 
 
 def emit_and_broadcast(run_id: str, event_type: str, payload: dict[str, Any]) -> RunEvent:
@@ -64,7 +65,8 @@ async def start_run(raw_text: str, repo_url: str | None = None) -> str:
     llm = create_doubao_client({"runId": run_id})
     repo = ConduitRepo.from_url(repo_url) if repo_url else create_conduit_repo()
     run_repos[run_id] = repo
-    asyncio.create_task(_run_pipeline(run_id, raw_text, llm, repo))
+    task = asyncio.create_task(_run_pipeline(run_id, raw_text, llm, repo))
+    run_tasks[run_id] = task
     return run_id
 
 
@@ -73,6 +75,19 @@ def provide_clarification_answers(run_id: str, answers: dict[str, str]) -> bool:
     if not fut or fut.done():
         return False
     fut.set_result(answers)
+    return True
+
+
+def stop_run(run_id: str) -> bool:
+    task = run_tasks.get(run_id)
+    if not task or task.done():
+        return False
+
+    fut = pending_answers.pop(run_id, None)
+    if fut and not fut.done():
+        fut.cancel()
+
+    task.cancel()
     return True
 
 
@@ -244,9 +259,23 @@ async def _run_pipeline(run_id: str, raw_text: str, llm, repo) -> None:
         except Exception:
             pass
         run_repos.pop(run_id, None)
+    except asyncio.CancelledError:
+        emit_and_broadcast(
+            run_id,
+            "run.cancelled",
+            {
+                "phase": run_phase.get(run_id, "unknown"),
+                "message": "Run stopped by user. Generated files may remain in the target worktree.",
+            },
+        )
+        raise
     except Exception as e:
         emit_and_broadcast(run_id, "run.error", {"message": str(e)})
+    finally:
         run_phase.pop(run_id, None)
+        pending_answers.pop(run_id, None)
+        run_tasks.pop(run_id, None)
+        run_repos.pop(run_id, None)
 
 
 async def _run_code_and_verify(run_id: str, skill, changes: ChangeSet, llm, repo) -> list:
@@ -280,7 +309,35 @@ async def replay_from(run_id: str, from_event_index: int, new_raw_text: str) -> 
         repo_nwo = ((started.payload or {}).get("repoNwo") if started else None) if started else None
         repo = ConduitRepo(Path(repo_path), upstream_nwo=repo_nwo) if repo_path else create_conduit_repo()
     run_repos[run_id] = repo
-    asyncio.create_task(_run_pipeline(run_id, new_raw_text, llm, repo))
+    task = asyncio.create_task(_run_pipeline(run_id, new_raw_text, llm, repo))
+    run_tasks[run_id] = task
+
+
+async def resume_run(run_id: str) -> bool:
+    active = run_tasks.get(run_id)
+    if active and not active.done():
+        return False
+
+    events = get_run_events(run_id)
+    if not events:
+        return False
+
+    raw_text = ""
+    for event in reversed(events):
+        if event.type == "run.started":
+            raw_text = str(event.payload.get("rawText") or "")
+            break
+    if not raw_text:
+        return False
+
+    safe_types = {"run.started", "clarify.done", "plan.done", "plan.generic", "locate.done", "code.done", "verify.done"}
+    keep_count = 0
+    for index, event in enumerate(events):
+        if event.type in safe_types:
+            keep_count = index + 1
+
+    await replay_from(run_id, keep_count, raw_text)
+    return True
 
 
 def get_run_events(run_id: str) -> list[RunEvent]:

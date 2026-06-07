@@ -20,7 +20,7 @@ function fmtCost(v: number): string {
 
 export default function App() {
   const [text, setText] = useState(DEMO_PROMPT);
-  const { state, startRun, submitAnswers, replayFrom, dismissRecall } = useRun();
+  const { state, startRun, stopRun, resumeRun, submitAnswers, replayFrom, dismissRecall } = useRun();
   const { state: repoState, setRepoUrl, cloneRepo } = useRepo();
   const feedRef = useRef<HTMLDivElement>(null);
   const [running, setRunning] = useState(false);
@@ -39,8 +39,18 @@ export default function App() {
 
   const repoReady = repoState.status === "ready";
 
-  const handleStart = async () => {
-    if (!text.trim() || running || !repoReady) return;
+  const handleRunButton = async () => {
+    if (running) {
+      if (state.phase === "stopping") return;
+      await stopRun();
+      return;
+    }
+    if (state.cancelled) {
+      setRunning(true);
+      await resumeRun();
+      return;
+    }
+    if (!text.trim() || !repoReady) return;
     setRunning(true);
     await startRun(text.trim(), repoState.repoUrl);
   };
@@ -61,7 +71,7 @@ export default function App() {
   const phaseLabel: Record<string, string> = {
     idle: "", starting: "启动中…", clarify: "等待澄清…",
     plan: "规划中…", locate: "定位文件…", code: "生成代码…",
-    verify: "验证中…", commit: "提交中…", pr: "提交 PR…", done: "完成", replaying: "重放中…",
+    verify: "验证中…", commit: "提交中…", pr: "提交 PR…", done: "完成", stopping: "停止中…", cancelled: "已停止", replaying: "重放中…",
   };
 
   const summary = globalMetrics
@@ -94,16 +104,21 @@ export default function App() {
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder="描述你的需求…"
-              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleStart(); } }}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleRunButton(); } }}
             />
             <div className="input-footer">
               <div className="input-toggles">
                 <span><i className="ti ti-history" aria-hidden="true" />历史召回 启用</span>
                 <span><i className="ti ti-search" aria-hidden="true" />aspect 扫描 启用</span>
               </div>
-              <button className="run-button" onClick={handleStart} disabled={running || !text.trim() || !repoReady} title={!repoReady ? "请先 Clone 目标仓库" : undefined}>
-                {running ? (phaseLabel[state.phase] ?? "运行中…") : "运行"}
-                <i className="ti ti-arrow-right" aria-hidden="true" />
+              <button
+                className={`run-button ${running ? "stop" : state.cancelled ? "resume" : ""}`}
+                onClick={handleRunButton}
+                disabled={(running && state.phase === "stopping") || (!running && !state.cancelled && (!text.trim() || !repoReady))}
+                title={!repoReady && !running && !state.cancelled ? "请先 Clone 目标仓库" : undefined}
+              >
+                {running ? (state.phase === "stopping" ? "停止中…" : "停止") : state.cancelled ? "继续" : "运行"}
+                <i className={`ti ${running ? "ti-player-stop" : state.cancelled ? "ti-rewind" : "ti-arrow-right"}`} aria-hidden="true" />
               </button>
             </div>
           </div>

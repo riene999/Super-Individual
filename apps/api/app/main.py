@@ -18,7 +18,9 @@ from orchestrator.orchestrator import (
     get_run_phase,
     provide_clarification_answers,
     replay_from,
+    resume_run,
     start_run,
+    stop_run,
 )
 from orchestrator.skills.registry import load_skills
 
@@ -147,6 +149,22 @@ async def intervene(run_id: str, body: Intervention):
     raise HTTPException(status_code=400, detail=err("unknown intervention type"))
 
 
+@app.post("/api/runs/{run_id}/stop")
+async def stop(run_id: str):
+    ok = stop_run(run_id)
+    if not ok:
+        raise HTTPException(status_code=409, detail=err("run is not active"))
+    return {"ok": True}
+
+
+@app.post("/api/runs/{run_id}/resume")
+async def resume(run_id: str):
+    ok = await resume_run(run_id)
+    if not ok:
+        raise HTTPException(status_code=409, detail=err("run cannot be resumed"))
+    return {"ok": True, "resuming": True}
+
+
 @app.get("/api/metrics")
 async def metrics():
     return aggregate_global()
@@ -160,4 +178,3 @@ async def run_metrics(run_id: str):
 @app.get("/api/runs/compare/{baseline}/{with_recall}")
 async def compare(baseline: str, with_recall: str):
     return compare_runs(baseline, with_recall)
-
