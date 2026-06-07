@@ -136,7 +136,7 @@ async def run_detail(run_id: str):
 @app.delete("/api/runs/{run_id}")
 async def delete_run(run_id: str):
     if is_run_active(run_id):
-        raise HTTPException(status_code=409, detail=err("cannot delete an active run"))
+        stop_run(run_id)
     ok = event_store.delete_run_events(run_id)
     if not ok:
         raise HTTPException(status_code=404, detail=err("run not found"))

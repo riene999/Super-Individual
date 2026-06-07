@@ -23,7 +23,7 @@ function fmtCost(v: number): string {
 
 export default function App() {
   const [text, setText] = useState(DEMO_PROMPT);
-  const { state, startRun, stopRun, resumeRun, submitAnswers, replayFrom, dismissRecall } = useRun();
+  const { state, startRun, stopRun, resumeRun, submitAnswers, replayFrom, replayRunFrom, dismissRecall } = useRun();
   const { state: repoState, setRepoUrl, cloneRepo } = useRepo();
   const feedRef = useRef<HTMLDivElement>(null);
   const [running, setRunning] = useState(false);
@@ -61,9 +61,18 @@ export default function App() {
   };
 
   const handleDeleteRunHistory = async (run: RecentRun) => {
-    const ok = window.confirm("删除这条 run 历史？这不会删除 memory，也不会回滚代码改动。");
+    const message = run.status === "running"
+      ? "这条 run 仍在运行。强制删除会先停止它，再删除历史；不会删除 memory，也不会回滚代码改动。"
+      : "删除这条 run 历史？这不会删除 memory，也不会回滚代码改动。";
+    const ok = window.confirm(message);
     if (!ok) return;
     await deleteRunHistory(run.runId);
+  };
+
+  const handleReplayHistoryRun = async (run: RecentRun, fromIndex: number, newText: string) => {
+    setActivityTab("events");
+    setRunning(true);
+    await replayRunFrom(run.runId, fromIndex, newText || run.rawText);
   };
 
   useEffect(() => {
@@ -188,7 +197,12 @@ export default function App() {
                 )}
               </div>
             ) : (
-              <RunHistoryPanel runs={recentRuns} loading={recentRunsLoading} onDelete={handleDeleteRunHistory} />
+              <RunHistoryPanel
+                runs={recentRuns}
+                loading={recentRunsLoading}
+                onDelete={handleDeleteRunHistory}
+                onReplay={handleReplayHistoryRun}
+              />
             )}
           </div>
 

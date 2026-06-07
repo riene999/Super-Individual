@@ -495,15 +495,23 @@ select:focus-visible {
   scrollbar-gutter: stable;
 }
 
+.run-history-row {
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.run-history-row.selected {
+  border-color: var(--border-strong);
+}
+
 .run-history-item {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 14px;
-  border: 0.5px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface);
   padding: 12px 14px;
+  cursor: pointer;
 }
 
 .run-history-main {
@@ -576,6 +584,54 @@ select:focus-visible {
 .run-delete:not(:disabled):hover {
   background: var(--danger-bg);
   border-color: color-mix(in srgb, var(--danger) 35%, var(--border));
+}
+
+.run-history-detail {
+  border-top: 0.5px solid var(--border);
+  padding: 10px 14px 12px;
+}
+
+.run-history-detail-empty,
+.run-history-warning {
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.run-history-warning {
+  margin-bottom: 8px;
+}
+
+.run-history-replay {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.run-history-replay select,
+.run-history-replay input {
+  min-width: 0;
+  padding: 5px 10px;
+  border: 0.5px solid var(--border);
+  border-radius: 6px;
+  background: var(--subtle);
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.run-history-replay input {
+  flex: 1;
+  background: transparent;
+}
+
+.run-history-replay button {
+  border: none;
+  border-radius: 6px;
+  background: var(--purple-100);
+  color: var(--purple-800);
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 .event {

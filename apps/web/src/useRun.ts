@@ -165,6 +165,21 @@ export function useRun() {
     if (res.ok) connectStream(state.runId);
   }, [connectStream, state.runId]);
 
+  const replayRunFrom = useCallback(async (runId: string, fromEventIndex: number, newText: string) => {
+    esRef.current?.close();
+    setState({ ...initial, runId, phase: "replaying", dismissedRunIds: new Set() });
+    const res = await fetch(`${API}/runs/${runId}/intervene`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "replay", fromEventIndex, newText }),
+    });
+    if (!res.ok) {
+      setState((prev) => ({ ...prev, error: "Unable to replay run", done: true }));
+      return;
+    }
+    connectStream(runId);
+  }, [connectStream]);
+
   const dismissRecall = useCallback(async (historicalRunId: string) => {
     if (!state.runId) return;
     await fetch(`${API}/runs/${state.runId}/dismiss-recall`, {
@@ -174,5 +189,5 @@ export function useRun() {
     });
   }, [state.runId]);
 
-  return { state, startRun, stopRun, resumeRun, submitAnswers, replayFrom, dismissRecall };
+  return { state, startRun, stopRun, resumeRun, submitAnswers, replayFrom, replayRunFrom, dismissRecall };
 }
