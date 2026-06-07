@@ -19,7 +19,7 @@ export default function ClarifyBox({ questions, prefills, onSubmit }: Props) {
 
   return (
     <div className="clarify-box">
-      <h3>需要澄清几个问题：</h3>
+      <h3><i className="ti ti-help" aria-hidden="true" />需要澄清几个问题</h3>
       {questions.map(({ q, aspect }) => {
         const prefill = prefills[q] ?? { mode: "empty" as const };
         return (
@@ -36,7 +36,7 @@ export default function ClarifyBox({ questions, prefills, onSubmit }: Props) {
           </div>
         );
       })}
-      <button onClick={handleSubmit}>提交答案 →</button>
+      <button onClick={handleSubmit}>提交答案 <i className="ti ti-arrow-right" aria-hidden="true" /></button>
     </div>
   );
 }

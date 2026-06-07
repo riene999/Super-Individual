@@ -20,8 +20,10 @@ export default function PrefilledInput({ value, onChange, onSubmit, prefill, pla
     // 状态 hint 不自动填值；状态 empty 什么也不做
   }, [prefill, didPrefill, value, onChange]);
 
+  const isPrefilled = prefill.mode === "exact" && didPrefill;
+
   return (
-    <div className="prefilled-input">
+    <div className={`prefilled-input ${isPrefilled ? "is-prefilled" : ""}`}>
       <div className="prefill-row">
         <input
           type="text"
@@ -30,15 +32,16 @@ export default function PrefilledInput({ value, onChange, onSubmit, prefill, pla
           onKeyDown={(e) => { if (e.key === "Enter" && onSubmit) onSubmit(); }}
           placeholder={placeholder ?? "输入你的回答…"}
         />
-        {prefill.mode === "exact" && didPrefill && (
+        {isPrefilled && (
           <span className="prefill-tag" title={`来自 run #${prefill.sourceRunId.slice(0, 4)}`}>
+            <i className="ti ti-history" aria-hidden="true" />
             {prefill.sourceLabel}
           </span>
         )}
       </div>
       {prefill.mode === "hint" && (
         <div className="prefill-hint" title={`来自 run #${prefill.sourceRunId.slice(0, 4)}`}>
-          💡 {prefill.hint}
+          <i className="ti ti-bulb" aria-hidden="true" /> {prefill.hint}
         </div>
       )}
     </div>

@@ -1,106 +1,79 @@
-import type { Stats } from "./metricsTypes.js";
-import { agentColor, SAMPLE_THRESHOLD } from "./metricsTypes.js";
-import { useGlobalMetrics } from "./useMetrics.js";
+import type { GlobalMetrics, Stats } from "./metricsTypes.js";
 import BaselineCompareCard from "./BaselineCompareCard.js";
 
 function fmtCost(v: number): string { return `¥${v.toFixed(4)}`; }
-function fmtMs(v: number): string {
-  return v >= 10_000 ? `${(v / 1000).toFixed(1)}s` : `${Math.round(v)}ms`;
+
+interface Props {
+  data: GlobalMetrics | null;
+  loading: boolean;
+  refresh: () => void;
 }
 
-export default function MetricsPanel({ refreshSignal }: { refreshSignal: number }) {
-  const { data, loading, refresh } = useGlobalMetrics(refreshSignal);
-
-  if (loading && !data) return <div className="metrics-panel"><div className="metrics-empty">加载中…</div></div>;
-  if (!data) return <div className="metrics-panel"><div className="metrics-empty">数据不可用</div></div>;
-
-  if (data.overall.count === 0) {
+export default function MetricsPanel({ data, loading, refresh }: Props) {
+  if (loading && !data) {
     return (
-      <div className="metrics-panel">
-        <div className="metrics-header">全局指标</div>
-        <div className="metrics-empty">还没有 LLM 调用记录。跑一次需求后再来看。</div>
+      <div className="sidebar-card">
+        <div className="sidebar-head">
+          <span className="sidebar-title">全局</span>
+          <span className="sidebar-meta">loading</span>
+        </div>
+        <div className="metrics-empty">加载中…</div>
       </div>
     );
   }
 
-  const { overall, byAgent, totalRuns } = data;
-  const showPercentiles = overall.count >= SAMPLE_THRESHOLD;
+  if (!data || data.overall.count === 0) {
+    return (
+      <>
+        <div className="sidebar-card">
+          <div className="sidebar-head">
+            <span className="sidebar-title">全局</span>
+            <button className="metrics-refresh" onClick={refresh}>刷新</button>
+          </div>
+          <div className="metrics-empty">还没有 LLM 调用记录。跑一次需求后再来看。</div>
+        </div>
+        <BaselineCompareCard />
+      </>
+    );
+  }
 
-  // 按总成本排序，最烧钱的 agent 在上面
-  const agents = Object.entries(byAgent).sort((a, b) => b[1].totalCostCNY - a[1].totalCostCNY);
+  const agents = Object.entries(data.byAgent).sort((a, b) => b[1].totalCostCNY - a[1].totalCostCNY);
   const maxCost = Math.max(...agents.map(([, s]) => s.totalCostCNY), 0.0001);
-  const maxLatency = Math.max(...agents.map(([, s]) => s.latency.max), 1);
 
   return (
-    <div className="metrics-panel">
-      <div className="metrics-header">
-        全局指标
-        <span className="metrics-sub">{totalRuns} runs · {overall.count} calls</span>
-        <button className="metrics-refresh" onClick={refresh}>刷新</button>
+    <>
+      <div className="sidebar-card">
+        <div className="sidebar-head">
+          <span className="sidebar-title">全局</span>
+          <span className="sidebar-meta">{data.totalRuns} runs · {data.overall.count} calls</span>
+          <button className="metrics-refresh" onClick={refresh}>刷新</button>
+        </div>
+        <div className="timeline-label">按 Agent 成本</div>
+        <div className="agent-bars">
+          {agents.map(([name, stats], index) => (
+            <AgentBar key={name} name={name} stats={stats} maxCost={maxCost} rank={index} />
+          ))}
+        </div>
       </div>
 
-      {/* KPI 顶栏 */}
-      <div className="kpi-row">
-        <div className="kpi"><div className="kpi-num">{overall.count}</div><div className="kpi-lbl">总调用</div></div>
-        <div className="kpi"><div className="kpi-num">{overall.totalTokens.toLocaleString()}</div><div className="kpi-lbl">总 tokens</div></div>
-        <div className="kpi"><div className="kpi-num">{fmtCost(overall.totalCostCNY)}</div><div className="kpi-lbl">总成本</div></div>
-        {showPercentiles ? (
-          <>
-            <div className="kpi"><div className="kpi-num">{fmtMs(overall.latency.p50)}</div><div className="kpi-lbl">Latency p50</div></div>
-            <div className="kpi"><div className="kpi-num">{fmtMs(overall.latency.p95)}</div><div className="kpi-lbl">Latency p95</div></div>
-          </>
-        ) : (
-          <>
-            <div className="kpi"><div className="kpi-num">{fmtMs(overall.latency.median)}</div><div className="kpi-lbl">Latency 中位</div></div>
-            <div className="kpi"><div className="kpi-num">{fmtMs(overall.latency.max)}</div><div className="kpi-lbl">Latency 最大</div></div>
-          </>
-        )}
-      </div>
-
-      {/* 修正 2 提示 */}
-      {!showPercentiles && (
-        <div className="sample-warn">样本数 {overall.count} &lt; {SAMPLE_THRESHOLD}，分位数不可靠，展示中位/最大替代</div>
-      )}
-
-      {/* WS-3 收尾：召回前后对比 */}
       <BaselineCompareCard />
-
-      {/* 按 agent 横条图 */}
-      <div className="bar-section">
-        <div className="bar-section-title">按 Agent 分摊成本</div>
-        {agents.map(([name, s]) => (
-          <AgentBar key={name} name={name} stats={s} maxCost={maxCost} maxLatency={maxLatency} showPercentiles={showPercentiles} />
-        ))}
-      </div>
-    </div>
+    </>
   );
 }
 
-function AgentBar({
-  name, stats, maxCost, maxLatency, showPercentiles,
-}: {
-  name: string; stats: Stats; maxCost: number; maxLatency: number; showPercentiles: boolean;
-}) {
+function AgentBar({ name, stats, maxCost, rank }: { name: string; stats: Stats; maxCost: number; rank: number }) {
   const costPct = (stats.totalCostCNY / maxCost) * 100;
-  const latPct = (stats.latency.median / maxLatency) * 100;
-  const color = agentColor(name);
+  const colors = ["#534AB7", "#7F77DD", "#AFA9EC", "#CECBF6"];
+  const color = colors[Math.min(rank, colors.length - 1)];
 
   return (
-    <div className="agent-row">
-      <div className="agent-name" style={{ color }}>{name}</div>
-      <div className="agent-bars">
-        <div className="bar-bg">
-          <div className="bar-fg" style={{ width: `${costPct}%`, background: color }} />
-          <span className="bar-label">{fmtCost(stats.totalCostCNY)} · {stats.count} calls · {stats.totalTokens} tokens</span>
-        </div>
-        <div className="bar-bg secondary">
-          <div className="bar-fg" style={{ width: `${latPct}%`, background: color, opacity: 0.5 }} />
-          <span className="bar-label">
-            {showPercentiles
-              ? `p50=${fmtMs(stats.latency.p50)}  p95=${fmtMs(stats.latency.p95)}`
-              : `min=${fmtMs(stats.latency.min)}  median=${fmtMs(stats.latency.median)}  max=${fmtMs(stats.latency.max)}`}
-          </span>
-        </div>
+    <div className="agent-bar">
+      <div className="agent-bar-head">
+        <span className="agent-bar-name">{name}</span>
+        <span className="agent-bar-cost">{fmtCost(stats.totalCostCNY)}</span>
+      </div>
+      <div className="agent-bar-track">
+        <div className="agent-bar-fill" style={{ width: `${costPct}%`, background: color }} />
       </div>
     </div>
   );
