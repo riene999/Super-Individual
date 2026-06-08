@@ -4,9 +4,8 @@ import json
 import re
 from pathlib import Path
 
-from orchestrator.llm.doubao import LLMClient
 from orchestrator.skills.base import Skill, default_generate, default_locate
-from orchestrator.types import ClarifiedRequest, FileStep, RepoContext, SkillPlan
+from orchestrator.types import FileStep, RepoContext, SkillPlan
 
 MAX_GENERIC_FILES = 12
 
@@ -93,140 +92,45 @@ def _clean_json(text: str) -> str:
     return s.strip()
 
 
-def parse_plan(text: str) -> tuple[list[FileStep], str]:
-    cleaned = _clean_json(text)
-    try:
-        data = json.loads(cleaned)
-    except Exception:
-        start = cleaned.find("{")
-        end = cleaned.rfind("}")
-        if start < 0 or end <= start:
-            raise
-        data = json.loads(cleaned[start : end + 1])
-    files = data.get("files")
+def steps_from_file_dicts(files: object) -> list[FileStep]:
+    """校验并转换 LLM 返回的 files 数组为 FileStep 列表；超过保险上限时显式报错（不静默截断）。"""
     if not isinstance(files, list):
-        raise ValueError("genericPlan 没有返回 files 数组")
-    # 不静默截断：规划文件数超过保险上限时显式报错，避免悄悄丢掉路由/导航这类配套文件
+        raise ValueError("plan 没有返回 files 数组")
     if len(files) > MAX_GENERIC_FILES:
         raise ValueError(
-            f"genericPlan 规划了 {len(files)} 个文件，超过上限 {MAX_GENERIC_FILES}；"
+            f"plan 规划了 {len(files)} 个文件，超过上限 {MAX_GENERIC_FILES}；"
             f"需求可能过大，建议拆分后分多次执行，或调高 MAX_GENERIC_FILES。"
         )
     steps: list[FileStep] = []
     for i, f in enumerate(files):
+        if not isinstance(f, dict):
+            raise ValueError(f"plan.files[{i}] 不是对象")
         path = str(f.get("path", "")).strip()
         mode = f.get("mode")
         instruction = str(f.get("instruction", "")).strip()
         if not path:
-            raise ValueError(f"genericPlan.files[{i}] 缺少 path")
+            raise ValueError(f"plan.files[{i}] 缺少 path")
         if mode not in {"modify", "create"}:
-            raise ValueError(f"genericPlan.files[{i}] mode 必须是 modify 或 create")
+            raise ValueError(f"plan.files[{i}] mode 必须是 modify 或 create")
         if not instruction:
-            raise ValueError(f"genericPlan.files[{i}] 缺少 instruction")
+            raise ValueError(f"plan.files[{i}] 缺少 instruction")
         steps.append(FileStep(path=path, mode=mode, instruction=instruction))
-    contract = str(data.get("contract", "")).strip()
-    return steps, contract
-
-
-def _fallback_plan(req: ClarifiedRequest, ctx: RepoContext) -> SkillPlan:
-    haystack = " ".join([req.summary, req.fieldName, req.businessRule, req.displayLocation]).lower()
-    root = Path(ctx.repoPath)
-    if any(x in haystack for x in ("comment", "comments", "评论")) and any(x in haystack for x in ("like", "likes", "点赞")):
-        candidates = [
-            FileStep(
-                path="backend/models/Comment.js",
-                mode="modify",
-                instruction=f"Add `{req.fieldName}` support for comments as a non-negative integer derived from idempotent comment likes.",
-            ),
-            FileStep(
-                path="backend/controllers/comments.js",
-                mode="modify",
-                instruction="Add idempotent comment like handling so the same user can only count once per comment, and return likeCount with comments.",
-            ),
-            FileStep(
-                path="backend/routes/articles/comments.js",
-                mode="modify",
-                instruction="Add authenticated routes for liking or unliking a comment under an article comment URL.",
-            ),
-            FileStep(
-                path="frontend/src/components/CommentList/CommentList.jsx",
-                mode="modify",
-                instruction=f"Show `{req.fieldName}` beside the comment like button and keep the UI count idempotent after repeated likes.",
-            ),
-            FileStep(
-                path="frontend/src/services/toggleCommentLike.js",
-                mode="create",
-                instruction="Create a service for toggling comment likes through the backend comment-like endpoint.",
-            ),
-        ]
-        return SkillPlan(
-            skillName="generic",
-            files=[step for step in candidates if step.mode == "create" or (root / step.path).exists()][:MAX_GENERIC_FILES],
-        )
-    raise RuntimeError("generic plan returned invalid JSON and no deterministic fallback matched")
-
-
-async def generic_plan(
-    req: ClarifiedRequest,
-    ctx: RepoContext,
-    llm: LLMClient,
-    code_spec_context: str | None = None,
-) -> SkillPlan:
-    result = await llm.chat(
-        [
-            {"role": "system", "content": "你是资深代码规划助手。只输出严格 JSON，不要输出 markdown 或解释。"},
-            {
-                "role": "user",
-                "content": f"""分析下面的产品需求，并提出需要修改或新建的文件清单。
-
-需求摘要：{req.summary}
-字段名：{req.fieldName}
-字段类型：{req.fieldType}
-展示位置：{req.displayLocation}
-业务规则：{req.businessRule}
-
-仓库概览：
-{get_repo_overview(ctx)}
-
-相关代码规范摘要：
-{code_spec_context or "暂无代码规范索引。"}
-
-输出 JSON，格式必须是：
-{{"contract":"跨文件必须一致的接口约定","files":[{{"path":"相对路径","mode":"modify|create","instruction":"具体实现说明"}}]}}
-
-要求：
-- path 必须相对 Conduit 仓库根目录。
-- mode="modify" 时，path 必须是真实存在的文件，或能从仓库概览中明确判断为已存在文件。
-- mode="create" 时，path 必须放在符合现有约定的位置。
-- **功能要从头管到尾，一个都不能漏**：后端新增 controller 处理逻辑就必须同时改对应的路由注册文件把它挂上；前端新增页面/Tab 就必须同时改路由表和导航入口文件；新增数据库字段就必须同时新建 migration。不要只做一半。
-- contract 字段：把多个文件之间**必须保持一致**的名字都在这里钉死，供所有文件严格共用，例如：新建组件的文件名与默认导出名、前端 import 路径、后端 API 路径（如 GET /articles/drafts）、字段名与枚举取值、函数/导出名等。下面每个文件的 instruction 都必须与 contract 完全一致，不得自行改名。
-- contract 还必须包含**既有事实**（不要臆造，要从上面的仓库概览中照抄）：涉及的数据库表名（严格照抄“既有数据库表名”中的大小写与单复数，例如 Articles 而不是 articles）、要复用的现有模型名/控制器导出名/路由前缀等。新建 migration、新增 controller/route 时必须使用这些既有名称。
-- instruction 要写清楚本文件具体改什么，不能只写“修改这个文件”，并显式引用 contract 里的名字（例如“import 路径用 contract 中的 X”）。
-- 文件数按需求实际需要来定，不要为了凑数硬塞，也不要为省事漏掉配套文件；上限 {MAX_GENERIC_FILES} 个。
-""",
-            },
-        ],
-        {"temperature": 0.1, "maxTokens": 1600},
-        {"agent": "plan:generic"},
-    )
-    try:
-        files, contract = parse_plan(result["text"])
-    except Exception:
-        return _fallback_plan(req, ctx)
-    return SkillPlan(skillName="generic", files=files, contract=contract)
+    return steps
 
 
 class GenericSkill(Skill):
+    """仅作为 locate/generate 的执行载体；规划由 plan_loop 负责。"""
+
     def __init__(self) -> None:
         super().__init__(
             name="generic",
-            description="未命中注册 skill 时使用的通用推理路径",
+            description="通用推理执行载体（规划走 plan_loop）",
             match_words=[],
             build_steps=lambda _req, _ctx: [],
         )
 
-    async def plan(self, _req: ClarifiedRequest, _ctx: RepoContext) -> SkillPlan:
-        raise RuntimeError("genericSkill.plan 需要 LLM，请直接调用 generic_plan(req, ctx, llm)")
+    async def plan(self, _req, _ctx) -> SkillPlan:
+        raise RuntimeError("GenericSkill.plan 不应被直接调用；规划走 plan_loop")
 
 
 generic_skill = GenericSkill()

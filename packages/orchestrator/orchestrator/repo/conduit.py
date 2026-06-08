@@ -123,6 +123,17 @@ class ConduitRepo:
         if errors:
             return VerifyResult(False, "", "[syntax-guard] " + "\n".join(errors), 1)
 
+        changed = [f.replace("\\", "/") for f in (target_files or [])]
+
+        # 构建级检查：后端加载冒烟 + 前端构建，专抓“幽灵模块/死 API/未声明依赖”这类单测拦不住的致命错
+        backend_check = self._backend_load_check(changed)
+        if backend_check is not None and not backend_check.success:
+            return backend_check
+
+        frontend_check = self._frontend_build_check(changed)
+        if frontend_check is not None and not frontend_check.success:
+            return frontend_check
+
         package_json = self.repo_path / "package.json"
         if not package_json.exists():
             return VerifyResult(True, "[verify skipped] package.json not found; syntax guard completed.", "", 0)
@@ -173,6 +184,71 @@ class ConduitRepo:
             env={**os.environ, "NO_COLOR": "1", "FORCE_COLOR": "0"},
         )
         return VerifyResult(r.returncode == 0, _strip_ansi(r.stdout or ""), _strip_ansi(r.stderr or ""), r.returncode)
+
+    def _backend_load_check(self, changed: list[str]) -> VerifyResult | None:
+        """加载冒烟：require 改动的后端模块，抓 module-not-found / 死 API / 语法错。
+        不连库（new Sequelize 仅构造不连接），连库/配置类错误一律忽略，只对真正的代码级错误判失败。"""
+        backend_dir = self.repo_path / "backend"
+        # 排除服务入口（require 它会 app.listen 占端口）；只查模型/控制器/路由/服务等模块
+        targets = [
+            f for f in changed
+            if f.startswith("backend/") and f.endswith(".js") and f != "backend/index.js" and (self.repo_path / f).exists()
+        ]
+        if not targets or not backend_dir.exists():
+            return None
+        node = shutil.which("node")
+        if not node:
+            return None
+        # 先加载 .env（应用入口靠 dotenv 读 DB 配置），否则 require 模型会死在 Sequelize 构造（被当环境错忽略）
+        requires = ";".join(f"require({json.dumps(str((self.repo_path / f).resolve()))})" for f in targets)
+        exprs = f"try{{require('dotenv').config()}}catch(e){{}};{requires}"
+        try:
+            r = subprocess.run(
+                [node, "-e", exprs],
+                cwd=backend_dir,
+                capture_output=True,
+                text=True, encoding="utf-8", errors="replace",
+                timeout=30,
+                env={**os.environ, "NODE_ENV": os.getenv("NODE_ENV", "development")},
+            )
+        except subprocess.TimeoutExpired:
+            return VerifyResult(True, "[backend-load skipped] require timed out", "", 0)
+        if r.returncode == 0:
+            return VerifyResult(True, "[backend-load] ok", "", 0)
+        err = _strip_ansi(r.stderr or "")
+        fatal = ("Cannot find module", "MODULE_NOT_FOUND", "is not a function", "SyntaxError", "ReferenceError", "is not defined")
+        if any(sig in err for sig in fatal):
+            return VerifyResult(False, "", "[backend-load] 后端模块加载失败（疑似缺失模块/死 API/语法错）：\n" + err[:1500], 1)
+        # 连库/配置/环境类错误：不阻断
+        return VerifyResult(True, "[backend-load] 仅环境/连库类报错，已忽略：\n" + err[:400], "", 0)
+
+    def _frontend_build_check(self, changed: list[str]) -> VerifyResult | None:
+        """前端构建检查：vite build，抓未声明依赖、未配置别名、解析失败等单测拦不住的错。"""
+        if not any(f.startswith("frontend/") for f in changed):
+            return None
+        if not (self.repo_path / "frontend" / "package.json").exists():
+            return None
+        if not (self.repo_path / "node_modules").exists():
+            return VerifyResult(True, "[frontend-build skipped] node_modules 缺失，先 npm install", "", 0)
+        npm = shutil.which("npm.cmd") or shutil.which("npm")
+        if not npm:
+            return VerifyResult(True, "[frontend-build skipped] npm not found on PATH", "", 0)
+        try:
+            r = subprocess.run(
+                [npm, "run", "build", "-w", "frontend"],
+                cwd=self.repo_path,
+                capture_output=True,
+                text=True, encoding="utf-8", errors="replace",
+                timeout=240,
+                env={**os.environ, "NO_COLOR": "1", "FORCE_COLOR": "0", "CI": "1"},
+            )
+        except subprocess.TimeoutExpired:
+            return VerifyResult(True, "[frontend-build skipped] build timed out", "", 0)
+        out = _strip_ansi(r.stdout or "")
+        err = _strip_ansi(r.stderr or "")
+        if r.returncode != 0:
+            return VerifyResult(False, out[-1200:], "[frontend-build] 前端构建失败：\n" + err[-1500:], r.returncode)
+        return VerifyResult(True, "[frontend-build] ok", "", 0)
 
     def get_context(self) -> RepoContext:
         branch = "main"

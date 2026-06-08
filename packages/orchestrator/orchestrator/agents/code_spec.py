@@ -10,7 +10,6 @@ from typing import Any
 from orchestrator.llm.doubao import LLMClient
 from orchestrator.repo import spec_store
 from orchestrator.repo.conduit import ConduitRepo
-from orchestrator.types import ClarifiedRequest
 
 MAX_CONTENT_CHARS = 12_000
 MAX_RELEVANT_FILES = 28
@@ -183,11 +182,10 @@ def _tokens(text: str) -> set[str]:
     return ascii_tokens | chinese_chunks
 
 
-def relevant_entries(req: ClarifiedRequest, repo: ConduitRepo, limit: int = MAX_RELEVANT_FILES) -> list[dict[str, Any]]:
+def relevant_entries(query: str, repo: ConduitRepo, limit: int = MAX_RELEVANT_FILES) -> list[dict[str, Any]]:
     spec = spec_store.read_spec(repo.upstream_nwo, repo.repo_path, "current")
     if not spec:
         return []
-    query = " ".join([req.summary, req.fieldName, req.fieldType, req.displayLocation, req.businessRule])
     query_tokens = _tokens(query)
     scored: list[tuple[int, dict[str, Any]]] = []
     for entry in (spec.get("files") or {}).values():
@@ -209,8 +207,8 @@ def relevant_entries(req: ClarifiedRequest, repo: ConduitRepo, limit: int = MAX_
     return [entry for _, entry in scored[:limit]]
 
 
-def format_relevant_context(req: ClarifiedRequest, repo: ConduitRepo, limit: int = MAX_RELEVANT_FILES) -> str:
-    entries = relevant_entries(req, repo, limit)
+def format_relevant_context(query: str, repo: ConduitRepo, limit: int = MAX_RELEVANT_FILES) -> str:
+    entries = relevant_entries(query, repo, limit)
     if not entries:
         return "代码规范索引暂未命中相关文件。"
     lines = []

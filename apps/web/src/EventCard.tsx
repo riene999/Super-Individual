@@ -52,7 +52,12 @@ function fmtPayload(type: string, payload: Record<string, unknown>): string {
   if (type === "clarify.done") {
     const r = payload.req as Record<string, unknown> | undefined;
     if (!r) return "";
-    return `Field: ${r.fieldName} (${r.fieldType})\nRule: ${r.businessRule}\nWhere: ${r.displayLocation}`;
+    const summary = String(r.summary ?? "");
+    const answers = (r.answers as Record<string, string>) ?? {};
+    const qa = Object.entries(answers).filter(([q]) => q);
+    const head = `需求：${summary}`;
+    if (!qa.length) return `${head}\n（plan agent 判断信息已足够，未提问）`;
+    return `${head}\n` + qa.map(([q, a], i) => `${i + 1}. ${q}\n   → ${a}`).join("\n");
   }
   if (type === "plan.done") {
     const p = payload.plan as Record<string, unknown> | undefined;
@@ -67,16 +72,13 @@ function fmtPayload(type: string, payload: Record<string, unknown>): string {
       files.map((f, i) => `${i + 1}. [${f.mode}] ${f.path}\n   ${f.instruction}`).join("\n");
   }
   if (type === "plan.generic") {
+    const plan = payload.plan as Record<string, unknown> | undefined;
     const files = (payload.files as Array<{ path: string; mode: string; instruction: string }>) ??
-      ((payload.plan as Record<string, unknown> | undefined)?.files as Array<{ path: string; mode: string; instruction: string }> | undefined) ??
+      (plan?.files as Array<{ path: string; mode: string; instruction: string }> | undefined) ??
       [];
-    const candidates = (payload.candidates as Array<{ name: string; score: number }>) ?? [];
-    const reason = payload.reason ? `\nreason: ${payload.reason}` : "";
-    const routerReason = payload.routerReason ? `\nrouter: ${payload.routerReason}` : "";
-    const scoreBoard = candidates.length
-      ? `\nCandidates: ${candidates.map((c) => `${c.name}=${c.score.toFixed(2)}`).join("  ")}`
-      : "";
-    return `无匹配 skill，走通用推理路径${reason}${routerReason}${scoreBoard}\n` +
+    const contract = String(plan?.contract ?? "").trim();
+    const contractBlock = contract ? `\n接口契约：${contract}` : "";
+    return `规划完成（规划与澄清合一）${contractBlock}\n` +
       files.map((f, i) => `${i + 1}. [${f.mode}] ${f.path}\n   ${f.instruction}`).join("\n");
   }
   if (type === "locate.done") {

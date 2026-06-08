@@ -25,7 +25,6 @@ from orchestrator.orchestrator import (
     start_run,
     stop_run,
 )
-from orchestrator.skills.registry import load_skills
 
 app = FastAPI()
 app.add_middleware(
@@ -102,12 +101,6 @@ async def reset_repo(body: RepoSetup):
 @app.get("/api/health")
 async def health():
     return {"ok": True}
-
-
-@app.get("/api/skills")
-async def skills():
-    loaded = await load_skills()
-    return [{"name": s.name, "description": s.description} for s in loaded]
 
 
 @app.post("/api/runs")

@@ -7,17 +7,16 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from orchestrator.agents import clarify, code, code_spec, locate, plan as plan_agent, verify
-from orchestrator.agents.aspect_scan import aspect_scan, filter_recall_for_scan
-from orchestrator.agents.generic_plan import generic_plan, generic_skill
+from orchestrator.agents import code, code_spec, locate, plan_loop, verify
+from orchestrator.agents.generic_plan import generic_skill
 from orchestrator.events import store as event_store
 from orchestrator.llm.doubao import create_doubao_client
 from orchestrator.memory.extract import extract_entities
 from orchestrator.memory.recall import recall
 from orchestrator.memory.store import persist_memory, read_all_memories
 from orchestrator.repo.conduit import ConduitRepo, create_conduit_repo
-from orchestrator.skills.registry import load_skills
-from orchestrator.types import ChangeSet, ClarifiedRequest, RunEvent, dataclass_to_json
+from orchestrator.skills.library_loader import load_skill_docs
+from orchestrator.types import ChangeSet, RunEvent, dataclass_to_json
 
 MAX_VERIFY_RETRIES = 2
 
@@ -52,8 +51,10 @@ def emit_and_broadcast(run_id: str, event_type: str, payload: dict[str, Any]) ->
     return event
 
 
-def _req_payload(req: ClarifiedRequest) -> dict[str, Any]:
-    return dataclass_to_json(req)
+def _branch_slug(title: str) -> str:
+    slug = "".join(c if (c.isascii() and c.isalnum()) else "-" for c in title.strip().lower())
+    slug = "-".join(part for part in slug.split("-") if part)
+    return slug[:40].strip("-") or "change"
 
 
 def _plan_payload_files(files) -> list[dict[str, Any]]:
@@ -114,19 +115,16 @@ async def _run_pipeline(run_id: str, raw_text: str, llm, repo) -> None:
                 "repoNwo": repo.upstream_nwo,
             },
         )
-        run_phase[run_id] = "clarify"
-        all_skills = await load_skills()
-        aspect_union = list(dict.fromkeys(aspect for s in all_skills for aspect in s.possible_aspects))
-        analysis_req = await clarify.analyze(raw_text, llm)
-
-        recall_matches_for_scan: list[dict[str, Any]] = []
+        # ---- recall：检索相似历史需求，作为规划知识源 ----
+        run_phase[run_id] = "recall"
+        recall_matches: list[dict[str, Any]] = []
         try:
-            query_entities = await extract_entities(llm, run_id=run_id, summary=analysis_req.summary, skill_used="")
+            query_entities = await extract_entities(llm, run_id=run_id, summary=raw_text, skill_used="")
             repo_nwo = run_repos.get(run_id, None)
             repo_nwo_str = repo_nwo.upstream_nwo if repo_nwo else None
             matches = recall(query_entities, read_all_memories(), top_k=3, min_score=0.3, repo_nwo=repo_nwo_str)
             if matches:
-                payload = [
+                recall_matches = [
                     {
                         "runId": m.memory.runId,
                         "score": m.score,
@@ -139,116 +137,83 @@ async def _run_pipeline(run_id: str, raw_text: str, llm, repo) -> None:
                     }
                     for m in matches
                 ]
-                emit_and_broadcast(run_id, "recall.matched", {"queryEntities": query_entities.__dict__, "matches": payload})
-                recall_matches_for_scan = payload
+                emit_and_broadcast(run_id, "recall.matched", {"queryEntities": query_entities.__dict__, "matches": recall_matches})
         except Exception:
             pass
 
+        # ---- code-spec：建/更新索引，算出相关文件摘要 ----
         run_phase[run_id] = "code-spec"
         ctx = repo.get_context()
         code_spec_context = None
         try:
             spec_status = await code_spec.ensure_current(repo, llm, run_id)
-            code_spec_context = code_spec.format_relevant_context(analysis_req, repo)
+            code_spec_context = code_spec.format_relevant_context(raw_text, repo)
             ctx.codeSpecContext = code_spec_context
             emit_and_broadcast(run_id, "spec.ready", spec_status)
         except Exception as e:
             emit_and_broadcast(run_id, "spec.failed", {"message": str(e)})
 
+        # ---- plan-loop：规划与澄清合一。plan agent 自评信息是否足够，不够才提问，最多 N 轮，到顶强制出规划 ----
         run_phase[run_id] = "plan"
-        plan_result = await plan_agent.run(analysis_req, ctx, llm, code_spec_context)
-        if plan_result.mode == "generic":
-            emit_and_broadcast(
-                run_id,
-                "plan.generic",
-                {
-                    "mode": "generic",
-                    "plan": dataclass_to_json(plan_result.plan),
-                    "files": _plan_payload_files(plan_result.plan.files),
-                    "score": plan_result.score,
-                    "by": plan_result.by,
-                    "candidates": plan_result.candidates,
-                    "routerReason": plan_result.routerReason,
-                    "reason": plan_result.genericReason,
-                },
-            )
-        else:
-            emit_and_broadcast(
-                run_id,
-                "plan.done",
-                {
-                    "mode": "skill",
-                    "plan": dataclass_to_json(plan_result.plan),
-                    "skillName": plan_result.skill.name if plan_result.skill else "",
-                    "score": plan_result.score,
-                    "by": plan_result.by,
-                    "candidates": plan_result.candidates,
-                    "routerReason": plan_result.routerReason,
-                },
-            )
-
-        skill = plan_result.skill or generic_skill
-        scan_for_skill: list[dict[str, Any]] = []
-        if plan_result.mode == "generic":
-            run_phase[run_id] = "clarify:generic"
-            questions = await clarify.generic_questions(raw_text, analysis_req, llm, run_id)
-        else:
-            run_phase[run_id] = "aspect-scan"
-            scan_result = await aspect_scan(
+        skills_context = load_skill_docs()
+        recall_context = plan_loop.format_recall_context(recall_matches)
+        qa_history: list[tuple[str, str]] = []
+        plan_out = None
+        for round_idx in range(plan_loop.MAX_QUESTION_ROUNDS + 1):
+            force_ready = round_idx == plan_loop.MAX_QUESTION_ROUNDS
+            plan_out = await plan_loop.plan_step(
+                raw_text,
+                ctx,
                 llm,
-                run_id=run_id,
-                raw_text=raw_text,
-                candidate_aspects=aspect_union,
-                recalled_history=filter_recall_for_scan(recall_matches_for_scan),
+                skills_context=skills_context,
+                code_spec_context=code_spec_context,
+                recall_context=recall_context,
+                qa_history=qa_history,
+                force_ready=force_ready,
             )
-            skill_aspects = set(skill.possible_aspects)
-            scan_for_skill = [item for item in scan_result.items if item.aspect in skill_aspects]
+            if plan_out.status == "ready":
+                break
+            run_phase[run_id] = "clarify"
             emit_and_broadcast(
                 run_id,
-                "aspect.scanned",
+                "clarify.questions",
                 {
-                    "skillName": skill.name,
-                    "all": [dataclass_to_json(item) for item in scan_result.items],
-                    "forSkill": [dataclass_to_json(item) for item in scan_for_skill],
-                    "breakdown": {
-                        "explicit": len([s for s in scan_for_skill if s.status == "explicit"]),
-                        "fromHistory": len([s for s in scan_for_skill if s.status == "from-history"]),
-                        "needsAsking": len([s for s in scan_for_skill if s.status == "needs-asking"]),
-                    },
+                    "questions": plan_out.questions,
+                    "partial": {"summary": raw_text},
+                    "aspectScan": [],
+                    "mode": "generic",
+                    "round": round_idx + 1,
                 },
             )
-            questions = await clarify.build_questions_from_aspects(scan_for_skill, skill, llm, run_id)
+            answers = await _wait_for_answers(run_id)
+            for q in plan_out.questions:
+                qa_history.append((q, answers.get(q, "")))
+            run_phase[run_id] = "plan"
+
+        final_plan = plan_out.plan
+        plan_title = plan_out.title or (raw_text[:48].strip() or "change")
 
         emit_and_broadcast(
             run_id,
-            "clarify.questions",
+            "clarify.done",
+            {"req": {"summary": raw_text, "answers": {q: a for q, a in qa_history}}},
+        )
+        emit_and_broadcast(
+            run_id,
+            "plan.generic",
             {
-                "questions": [q.__dict__ for q in questions],
-                "partial": _req_payload(analysis_req),
-                "aspectScan": [dataclass_to_json(item) for item in scan_for_skill],
-                "mode": plan_result.mode,
+                "mode": "generic",
+                "plan": dataclass_to_json(final_plan),
+                "files": _plan_payload_files(final_plan.files),
+                "score": 0,
+                "by": "plan-loop",
+                "candidates": [],
+                "routerReason": None,
+                "reason": "plan-loop（规划与澄清合一）",
             },
         )
 
-        run_phase[run_id] = "clarify"
-        if questions:
-            answers = await _wait_for_answers(run_id)
-            req = await clarify.resolve(raw_text, analysis_req, answers, llm)
-        else:
-            inferred_answers = {
-                item.aspect: item.evidence
-                for item in scan_for_skill
-                if item.status in ("explicit", "from-history") and item.evidence
-            }
-            req = ClarifiedRequest(**{**analysis_req.__dict__, "answers": inferred_answers})
-        emit_and_broadcast(run_id, "clarify.done", {"req": _req_payload(req)})
-
-        if plan_result.mode == "generic":
-            code_spec_context = code_spec.format_relevant_context(req, repo)
-            ctx.codeSpecContext = code_spec_context
-            final_plan = await generic_plan(req, ctx, llm, code_spec_context)
-        else:
-            final_plan = await skill.plan(req, ctx)
+        skill = generic_skill
         run_phase[run_id] = "locate"
         changes = await locate.run(skill, final_plan, ctx)
         emit_and_broadcast(run_id, "locate.done", {"attempt": 1, "files": [f.__dict__ for f in changes.files], "fileCount": len(changes.files)})
@@ -262,14 +227,14 @@ async def _run_pipeline(run_id: str, raw_text: str, llm, repo) -> None:
             emit_and_broadcast(run_id, "spec.update_failed", {"message": str(e)})
 
         run_phase[run_id] = "commit"
-        branch = f"feat/{req.fieldName}-{int(time.time() * 1000)}"
+        branch = f"feat/{_branch_slug(plan_title)}-{int(time.time() * 1000)}"
         repo.checkout_branch(branch)
-        commit_msg = f"feat: add {req.fieldName} field\n\n{req.businessRule}"
+        commit_msg = f"feat: {plan_title}\n\n{raw_text}"
         repo.stage_and_commit(commit_msg, [p.path for p in patches])
 
         run_phase[run_id] = "pr"
-        pr_title = f"feat: add {req.fieldName}"
-        pr_body = req.businessRule or commit_msg
+        pr_title = f"feat: {plan_title}"
+        pr_body = raw_text or commit_msg
         repo.push_branch(branch)
         pr_url = repo.create_pr(branch, pr_title, pr_body)
 
