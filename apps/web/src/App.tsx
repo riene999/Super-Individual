@@ -29,6 +29,7 @@ export default function App() {
   const [running, setRunning] = useState(false);
   const [metricsSignal, setMetricsSignal] = useState(0);
   const [activityTab, setActivityTab] = useState<"events" | "history">("events");
+  const [recallEnabled, setRecallEnabled] = useState(true);
 
   const { data: runMetrics } = useRunMetrics(state.runId, metricsSignal);
   const { data: globalMetrics, loading: globalLoading, refresh: refreshGlobalMetrics } = useGlobalMetrics(metricsSignal);
@@ -57,13 +58,13 @@ export default function App() {
     }
     if (!text.trim() || !repoReady) return;
     setRunning(true);
-    await startRun(text.trim(), repoState.repoUrl);
+    await startRun(text.trim(), repoState.repoUrl, !recallEnabled);
   };
 
   const handleStartNewRun = async () => {
     if (!text.trim() || !repoReady || running) return;
     setRunning(true);
-    await startRun(text.trim(), repoState.repoUrl);
+    await startRun(text.trim(), repoState.repoUrl, !recallEnabled);
   };
 
   const handleResetRepo = async (repoUrl: string) => {
@@ -140,8 +141,15 @@ export default function App() {
             />
             <div className="input-footer">
               <div className="input-toggles">
-                <span><i className="ti ti-history" aria-hidden="true" />历史召回 启用</span>
-                <span><i className="ti ti-search" aria-hidden="true" />aspect 扫描 启用</span>
+                <button
+                  type="button"
+                  className={`toggle-chip ${recallEnabled ? "on" : "off"}`}
+                  onClick={() => setRecallEnabled((v) => !v)}
+                  aria-pressed={recallEnabled}
+                  title="开/关历史召回：是否检索相似历史需求作为规划参考"
+                >
+                  <i className="ti ti-history" aria-hidden="true" />历史召回 {recallEnabled ? "启用" : "停用"}
+                </button>
               </div>
               <div className="run-actions">
               <button

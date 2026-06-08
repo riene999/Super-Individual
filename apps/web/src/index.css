@@ -413,6 +413,7 @@ select:focus-visible {
 }
 
 .input-toggles span,
+.toggle-chip,
 .run-button,
 .clarify-box h3,
 .clarify-box button,
@@ -426,6 +427,25 @@ select:focus-visible {
 
 .input-toggles i {
   font-size: 13px;
+}
+
+.toggle-chip {
+  font: inherit;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border, #d0d0d0);
+  background: transparent;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.toggle-chip.on {
+  color: var(--accent, #2563eb);
+  border-color: var(--accent, #2563eb);
+}
+.toggle-chip.off {
+  color: var(--text-tertiary);
+  opacity: 0.65;
 }
 
 .run-actions {

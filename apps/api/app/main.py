@@ -39,6 +39,7 @@ app.add_middleware(
 class RunCreate(BaseModel):
     text: str
     repoUrl: str | None = None
+    recallDisabled: bool = False
 
 
 class RepoSetup(BaseModel):
@@ -108,7 +109,7 @@ async def runs(body: RunCreate):
     text = body.text.strip()
     if not text:
         raise HTTPException(status_code=400, detail=err("text is required"))
-    run_id = await start_run(text, body.repoUrl)
+    run_id = await start_run(text, body.repoUrl, body.recallDisabled)
     return {"runId": run_id}
 
 

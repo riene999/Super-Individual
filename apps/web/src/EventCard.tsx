@@ -15,6 +15,7 @@ const EVENT_STYLES: Record<string, EventStyle> = {
   "recall.stale":      { title: "Recall stale", icon: "ti-alert-triangle", tone: "warn" },
   "recall.dismissed":  { title: "Recall dismissed", icon: "ti-history-off", tone: "gray" },
   "spec.ready":        { title: "Code spec ready", icon: "ti-file-check", tone: "success" },
+  "spec.selected":     { title: "Code spec select", icon: "ti-list-search", tone: "purple" },
   "spec.failed":       { title: "Code spec skipped", icon: "ti-file-alert", tone: "warn" },
   "spec.updated":      { title: "Code spec updated", icon: "ti-file-pencil", tone: "success" },
   "spec.update_failed": { title: "Code spec update failed", icon: "ti-file-alert", tone: "warn" },
@@ -105,6 +106,11 @@ function fmtPayload(type: string, payload: Record<string, unknown>): string {
   }
   if (type === "spec.ready") {
     return `files: ${payload.fileCount ?? 0}\nchanged: ${payload.changedCount ?? 0}\nremoved: ${payload.removedCount ?? 0}`;
+  }
+  if (type === "spec.selected") {
+    const paths = (payload.paths as string[]) ?? [];
+    if (!paths.length) return "未命中相关文件（回退关键词召回）";
+    return `选中 ${paths.length} 个相关文件：\n` + paths.map((p) => `- ${p}`).join("\n");
   }
   if (type === "spec.updated") {
     return `files: ${payload.fileCount ?? 0}\nupdated: ${payload.updatedCount ?? 0}\nremoved: ${payload.removedCount ?? 0}`;

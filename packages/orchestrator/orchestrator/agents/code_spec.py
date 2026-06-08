@@ -14,6 +14,8 @@ from orchestrator.repo.conduit import ConduitRepo
 MAX_CONTENT_CHARS = 12_000
 MAX_RELEVANT_FILES = 28
 SUMMARY_CONCURRENCY = 8
+SELECT_MAX = 30           # code-spec 选择 agent 最多挑多少个文件
+CATALOG_MAX_FILES = 350   # 索引超过此数则跳过 LLM 选片，回退关键词（避免 token 爆）
 
 
 def _clean_json(text: str) -> dict[str, Any]:
@@ -207,8 +209,7 @@ def relevant_entries(query: str, repo: ConduitRepo, limit: int = MAX_RELEVANT_FI
     return [entry for _, entry in scored[:limit]]
 
 
-def format_relevant_context(query: str, repo: ConduitRepo, limit: int = MAX_RELEVANT_FILES) -> str:
-    entries = relevant_entries(query, repo, limit)
+def _render_entries(entries: list[dict[str, Any]]) -> str:
     if not entries:
         return "代码规范索引暂未命中相关文件。"
     lines = []
@@ -221,3 +222,76 @@ def format_relevant_context(query: str, repo: ConduitRepo, limit: int = MAX_RELE
             + (f" | symbols: {symbols}" if symbols else "")
         )
     return "\n".join(lines)
+
+
+def format_relevant_context(query: str, repo: ConduitRepo, limit: int = MAX_RELEVANT_FILES) -> str:
+    """关键词 token 重叠召回（同步、无 LLM），作为 select_relevant_context 的 fallback。"""
+    return _render_entries(relevant_entries(query, repo, limit))
+
+
+async def select_relevant_context(
+    query: str, repo: ConduitRepo, llm: LLMClient, run_id: str | None = None
+) -> tuple[str, list[str]]:
+    """code-spec 选择 agent：把全量索引目录交给 LLM，按语义挑出与需求相关的文件。
+
+    返回 (渲染后的相关文件摘要文本, 选中的路径列表)。LLM 失败 / 索引过大 / 无命中时回退关键词召回。
+    """
+    spec = spec_store.read_spec(repo.upstream_nwo, repo.repo_path, "current")
+    items = list(((spec or {}).get("files") or {}).values())
+    if not items:
+        return "代码规范索引暂未命中相关文件。", []
+
+    def _keyword_fallback() -> tuple[str, list[str]]:
+        entries = relevant_entries(query, repo)
+        return _render_entries(entries), [str(e.get("path", "")) for e in entries]
+
+    # 索引过大：直接走关键词，避免目录 token 爆
+    if len(items) > CATALOG_MAX_FILES:
+        return _keyword_fallback()
+
+    catalog_lines = []
+    for entry in items:
+        tags = ", ".join(str(x) for x in (entry.get("tags") or [])[:6])
+        summary = str(entry.get("summary", ""))[:120]
+        catalog_lines.append(f"{entry.get('path')} — {summary}" + (f" | {tags}" if tags else ""))
+    catalog = "\n".join(catalog_lines)
+
+    try:
+        result = await llm.chat(
+            [
+                {"role": "system", "content": "你是代码检索助手。从给定文件目录中挑出与需求实现最相关的文件。只输出 JSON，不要解释。"},
+                {
+                    "role": "user",
+                    "content": f"""需求：{query}
+
+仓库文件目录（每行：path — 摘要 | tags）：
+{catalog}
+
+请挑出实现该需求最相关的文件：既包括很可能需要改动的文件，也包括能体现相关约定/可参考范例的文件（同类已有功能、对应模型、路由注册文件、可参考组件等）。
+- 最多 {SELECT_MAX} 个；宁缺毋滥，但不要漏掉明显涉及的层（model/controller/route/页面/组件）。
+- path 必须从上面目录里原样照抄，不要臆造。
+输出 JSON：{{"paths":["...","..."]}}""",
+                },
+            ],
+            {"temperature": 0.1, "maxTokens": 800},
+            {"agent": "code-spec:select", "runId": run_id or "_global"},
+        )
+        data = _clean_json(result["text"])
+        picked = [str(p).strip() for p in (data.get("paths") or [])]
+    except Exception:
+        return _keyword_fallback()
+
+    by_path = {str(e.get("path")): e for e in items}
+    seen: set[str] = set()
+    chosen: list[dict[str, Any]] = []
+    for p in picked:
+        entry = by_path.get(p)
+        if entry and p not in seen:
+            seen.add(p)
+            chosen.append(entry)
+        if len(chosen) >= SELECT_MAX:
+            break
+
+    if not chosen:
+        return _keyword_fallback()
+    return _render_entries(chosen), [str(e.get("path")) for e in chosen]

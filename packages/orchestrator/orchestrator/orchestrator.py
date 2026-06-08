@@ -61,12 +61,12 @@ def _plan_payload_files(files) -> list[dict[str, Any]]:
     return [dataclass_to_json(f) for f in files]
 
 
-async def start_run(raw_text: str, repo_url: str | None = None) -> str:
+async def start_run(raw_text: str, repo_url: str | None = None, recall_disabled: bool = False) -> str:
     run_id = str(uuid4())
     llm = create_doubao_client({"runId": run_id})
     repo = ConduitRepo.from_url(repo_url) if repo_url else create_conduit_repo()
     run_repos[run_id] = repo
-    task = asyncio.create_task(_run_pipeline(run_id, raw_text, llm, repo))
+    task = asyncio.create_task(_run_pipeline(run_id, raw_text, llm, repo, recall_disabled))
     run_tasks[run_id] = task
     return run_id
 
@@ -103,43 +103,44 @@ async def _wait_for_answers(run_id: str) -> dict[str, str]:
     return await fut
 
 
-async def _run_pipeline(run_id: str, raw_text: str, llm, repo) -> None:
+async def _run_pipeline(run_id: str, raw_text: str, llm, repo, recall_disabled: bool = False) -> None:
     try:
         emit_and_broadcast(
             run_id,
             "run.started",
             {
                 "rawText": raw_text,
-                "recallDisabled": False,
+                "recallDisabled": recall_disabled,
                 "repoPath": str(repo.repo_path),
                 "repoNwo": repo.upstream_nwo,
             },
         )
-        # ---- recall：检索相似历史需求，作为规划知识源 ----
+        # ---- recall：检索相似历史需求，作为规划知识源（可被前端开关关闭）----
         run_phase[run_id] = "recall"
         recall_matches: list[dict[str, Any]] = []
-        try:
-            query_entities = await extract_entities(llm, run_id=run_id, summary=raw_text, skill_used="")
-            repo_nwo = run_repos.get(run_id, None)
-            repo_nwo_str = repo_nwo.upstream_nwo if repo_nwo else None
-            matches = recall(query_entities, read_all_memories(), top_k=3, min_score=0.3, repo_nwo=repo_nwo_str)
-            if matches:
-                recall_matches = [
-                    {
-                        "runId": m.memory.runId,
-                        "score": m.score,
-                        "matchedDimensions": m.matchedDimensions,
-                        "summary": m.memory.summary,
-                        "skillUsed": m.memory.skillUsed,
-                        "outcome": m.memory.outcome,
-                        "expectedFiles": m.memory.changedFiles,
-                        "clarifications": [c.__dict__ for c in m.memory.clarifications],
-                    }
-                    for m in matches
-                ]
-                emit_and_broadcast(run_id, "recall.matched", {"queryEntities": query_entities.__dict__, "matches": recall_matches})
-        except Exception:
-            pass
+        if not recall_disabled:
+            try:
+                query_entities = await extract_entities(llm, run_id=run_id, summary=raw_text, skill_used="")
+                repo_nwo = run_repos.get(run_id, None)
+                repo_nwo_str = repo_nwo.upstream_nwo if repo_nwo else None
+                matches = recall(query_entities, read_all_memories(), top_k=3, min_score=0.3, repo_nwo=repo_nwo_str)
+                if matches:
+                    recall_matches = [
+                        {
+                            "runId": m.memory.runId,
+                            "score": m.score,
+                            "matchedDimensions": m.matchedDimensions,
+                            "summary": m.memory.summary,
+                            "skillUsed": m.memory.skillUsed,
+                            "outcome": m.memory.outcome,
+                            "expectedFiles": m.memory.changedFiles,
+                            "clarifications": [c.__dict__ for c in m.memory.clarifications],
+                        }
+                        for m in matches
+                    ]
+                    emit_and_broadcast(run_id, "recall.matched", {"queryEntities": query_entities.__dict__, "matches": recall_matches})
+            except Exception:
+                pass
 
         # ---- code-spec：建/更新索引，算出相关文件摘要 ----
         run_phase[run_id] = "code-spec"
@@ -147,9 +148,11 @@ async def _run_pipeline(run_id: str, raw_text: str, llm, repo) -> None:
         code_spec_context = None
         try:
             spec_status = await code_spec.ensure_current(repo, llm, run_id)
-            code_spec_context = code_spec.format_relevant_context(raw_text, repo)
-            ctx.codeSpecContext = code_spec_context
             emit_and_broadcast(run_id, "spec.ready", spec_status)
+            # code-spec 选择 agent：全量索引交给 LLM 按语义挑相关文件（失败/过大回退关键词）
+            code_spec_context, selected_paths = await code_spec.select_relevant_context(raw_text, repo, llm, run_id)
+            ctx.codeSpecContext = code_spec_context
+            emit_and_broadcast(run_id, "spec.selected", {"paths": selected_paths, "count": len(selected_paths)})
         except Exception as e:
             emit_and_broadcast(run_id, "spec.failed", {"message": str(e)})
 
@@ -297,13 +300,14 @@ async def replay_from(run_id: str, from_event_index: int, new_raw_text: str) -> 
     emit_and_broadcast(run_id, "run.intervened", {"fromEventIndex": from_event_index, "newRawText": new_raw_text})
     llm = create_doubao_client({"runId": run_id})
     repo = run_repos.get(run_id)
+    started = next((e for e in get_run_events(run_id) if e.type == "run.started"), None)
     if repo is None:
-        started = next((e for e in get_run_events(run_id) if e.type == "run.started"), None)
         repo_path = ((started.payload or {}).get("repoPath") if started else None) if started else None
         repo_nwo = ((started.payload or {}).get("repoNwo") if started else None) if started else None
         repo = ConduitRepo(Path(repo_path), upstream_nwo=repo_nwo) if repo_path else create_conduit_repo()
     run_repos[run_id] = repo
-    task = asyncio.create_task(_run_pipeline(run_id, new_raw_text, llm, repo))
+    recall_disabled = bool((started.payload or {}).get("recallDisabled")) if started else False
+    task = asyncio.create_task(_run_pipeline(run_id, new_raw_text, llm, repo, recall_disabled))
     run_tasks[run_id] = task
 
 
