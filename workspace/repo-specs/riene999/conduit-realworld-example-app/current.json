@@ -3,7 +3,7 @@
   "repoNwo": "riene999/conduit-realworld-example-app",
   "repoPath": "D:\\Code\\super-individual\\workspace\\repos\\riene999\\conduit-realworld-example-app",
   "branch": "main",
-  "updatedAt": 1780850778923,
+  "updatedAt": 1780859078110,
   "files": {
     "CODE_OF_CONDUCT.md": {
       "path": "CODE_OF_CONDUCT.md",
@@ -65,20 +65,19 @@
     },
     "backend/controllers/articles.js": {
       "path": "backend/controllers/articles.js",
-      "hash": "a0ef6cf53cb344ba044d01bfd21d342052e75114e987682517a7e6e5c78b14d3",
-      "bytes": 7613,
-      "summary": "该文件是后端文章控制器，封装文章列表查询、草稿管理、增删改查、关注流等核心业务接口逻辑",
+      "hash": "f6d5b69459d7ab79621baa72fff65f8b3ad915840e4b4c3b001c636eb9a464ca",
+      "bytes": 6711,
+      "summary": "后端文章业务控制器，基于Sequelize实现文章全生命周期接口逻辑，包含权限校验与关联数据格式化处理。",
       "tags": [
         "article controller",
-        "backend",
-        "crud",
-        "sequelize",
         "rest api",
-        "content management"
+        "sequelize",
+        "权限校验",
+        "文章管理",
+        "业务逻辑"
       ],
       "symbols": [
         "allArticles",
-        "myDrafts",
         "createArticle",
         "articlesFeed",
         "singleArticle",
@@ -90,20 +89,20 @@
         "} = require(\"../helper/helpers\");",
         "const { Article, Tag, User } = require(\"../models\");"
       ],
-      "updatedAt": 1780850776046
+      "updatedAt": 1780859072143
     },
     "backend/controllers/comments.js": {
       "path": "backend/controllers/comments.js",
       "hash": "4ff577f25b414e79bbd436cab2539847160a0e6b9ed88002e5489898c8201d2d",
       "bytes": 2345,
-      "summary": "该文件为后端评论控制器，实现指定文章的评论列表查询、新建、删除接口逻辑，包含权限校验与关联数据处理",
+      "summary": "该后端控制器实现文章评论的列表查询、创建、删除接口逻辑，包含身份校验、权限校验与关联数据处理",
       "tags": [
         "comment controller",
         "后端接口",
-        "文章评论",
         "权限校验",
         "sequelize",
-        "业务逻辑"
+        "文章评论",
+        "restful"
       ],
       "symbols": [
         "allComments",
@@ -115,7 +114,7 @@
         "const { appendFollowers } = require(\"../helper/helpers\");",
         "const { Article, Comment, User } = require(\"../models\");"
       ],
-      "updatedAt": 1780850540665
+      "updatedAt": 1780858757372
     },
     "backend/controllers/favorites.js": {
       "path": "backend/controllers/favorites.js",
@@ -479,15 +478,15 @@
     },
     "backend/models/Article.js": {
       "path": "backend/models/Article.js",
-      "hash": "f7412fece8d5e1b85f624c112b18de283fbb9203baa9d0c40b673ffda40fde93",
-      "bytes": 1621,
-      "summary": "基于Sequelize实现文章数据模型，定义字段属性，关联用户、标签、评论，重写序列化隐藏内部字段",
+      "hash": "d8dceed0df1832ad18b5eebb9a4e4c980f20edf77e2550cc185a5ef6ed221cd4",
+      "bytes": 1467,
+      "summary": "实现Sequelize文章数据模型，定义字段，关联用户、评论、标签、收藏关系，序列化时隐藏id与userId字段",
       "tags": [
         "sequelize",
-        "文章模型",
         "orm",
-        "数据层",
-        "关联定义",
+        "文章模型",
+        "数据模型",
+        "关联配置",
         "后端"
       ],
       "symbols": [
@@ -498,20 +497,20 @@
       "imports": [
         "const { Model } = require(\"sequelize\");"
       ],
-      "updatedAt": 1780850776753
+      "updatedAt": 1780859073573
     },
     "backend/models/Comment.js": {
       "path": "backend/models/Comment.js",
       "hash": "dfa2ccb30834ba8d14dc619805462bac4b4bc3a96f93ec284455dcb898468efa",
       "bytes": 996,
-      "summary": "该文件是Sequelize评论数据模型，定义id、body字段，关联所属文章与作者，序列化时隐藏外键字段",
+      "summary": "实现Sequelize评论ORM模型，定义核心字段，关联所属文章与作者，序列化时隐藏外键",
       "tags": [
         "sequelize",
-        "orm",
-        "comment",
+        "comment model",
         "数据模型",
+        "orm",
         "后端",
-        "关联定义"
+        "评论模块"
       ],
       "symbols": [
         "Comment",
@@ -521,7 +520,7 @@
       "imports": [
         "const { Model } = require(\"sequelize\");"
       ],
-      "updatedAt": 1780850541839
+      "updatedAt": 1780858757430
     },
     "backend/models/Tag.js": {
       "path": "backend/models/Tag.js",
@@ -623,14 +622,14 @@
       "path": "backend/routes/articles.js",
       "hash": "dfd968265a6878dd2dd483916001c23ca14263ce43abafb3e142c7161e778aeb",
       "bytes": 996,
-      "summary": "该文件为Express文章业务路由，所有接口前置Token校验，定义文章CRUD、Feed接口，挂载收藏、评论子路由",
+      "summary": "该Express文章路由文件，所有接口前置token校验，定义文章CRUD、feed接口，挂载收藏、评论子路由",
       "tags": [
         "express",
         "router",
         "articles",
+        "jwt校验",
         "restful api",
-        "jwt auth",
-        "backend"
+        "后端路由"
       ],
       "symbols": [
         "router",
@@ -648,7 +647,7 @@
         "const favoritesRoutes = require(\"./articles/favorites\");",
         "const commentsRoutes = require(\"./articles/comments\");"
       ],
-      "updatedAt": 1780850542004
+      "updatedAt": 1780858756858
     },
     "backend/routes/articles/comments.js": {
       "path": "backend/routes/articles/comments.js",
@@ -826,16 +825,16 @@
     },
     "backend/seeders/20220427123222-create-articles.js": {
       "path": "backend/seeders/20220427123222-create-articles.js",
-      "hash": "8ea5fe8cbf76815186f1dcd744c89b3d091913b31ce899f9274e41f134cbeea3",
-      "bytes": 1228,
-      "summary": "这是Sequelize文章表种子文件，up生成55条关联随机用户的测试文章，down批量清空Articles表数据",
+      "hash": "0bff70d4d8e5fb9298b29104b69e408cfb4e0310517891161e1a91faa6ced572",
+      "bytes": 1306,
+      "summary": "这是Sequelize文章表种子文件，up生成55条关联随机用户的测试文章批量插入，down清空文章全表数据",
       "tags": [
         "sequelize",
         "seeder",
         "数据填充",
-        "articles",
         "测试数据",
-        "批量操作"
+        "articles",
+        "后端"
       ],
       "symbols": [
         "up",
@@ -844,7 +843,7 @@
       "imports": [
         "const { User } = require(\"../models\");"
       ],
-      "updatedAt": 1780849438281
+      "updatedAt": 1780859072601
     },
     "frontend/index.html": {
       "path": "frontend/index.html",
@@ -986,19 +985,20 @@
     },
     "frontend/src/components/ArticleEditorForm/ArticleEditorForm.jsx": {
       "path": "frontend/src/components/ArticleEditorForm/ArticleEditorForm.jsx",
-      "hash": "c3774b10d3c0648eef217269dca651ac42a4ba76131d7c7717f380b7093e56a1",
-      "bytes": 4362,
-      "summary": "该React组件实现文章编辑表单，支持新建/编辑文章、草稿保存，校验登录权限，提交后跳转对应页面",
+      "hash": "3ea05b51df82deef0f3e87c8369f1a63cc23e3d9ba161d4400e23f801829bcf6",
+      "bytes": 3519,
+      "summary": "该React组件实现文章发布/编辑表单，校验登录权限，支持加载已有文章数据，提交后跳转至对应文章详情页",
       "tags": [
         "react",
-        "form component",
         "article editor",
-        "权限校验",
-        "草稿保存",
-        "前端"
+        "form",
+        "frontend component",
+        "routing",
+        "auth validation"
       ],
       "symbols": [
         "ArticleEditorForm",
+        "emptyForm",
         "inputHandler",
         "tagsInputHandler",
         "formSubmit"
@@ -1011,7 +1011,7 @@
         "import setArticle from \"../../services/setArticle\";",
         "import FormFieldset from \"../FormFieldset\";"
       ],
-      "updatedAt": 1780850776735
+      "updatedAt": 1780859073002
     },
     "frontend/src/components/ArticleEditorForm/index.js": {
       "path": "frontend/src/components/ArticleEditorForm/index.js",
@@ -1039,10 +1039,10 @@
       "tags": [
         "react",
         "jsx",
-        "文章元信息",
+        "文章组件",
+        "元信息展示",
         "路由跳转",
-        "日期格式化",
-        "用户头像"
+        "日期格式化"
       ],
       "symbols": [
         "ArticleMeta"
@@ -1052,7 +1052,7 @@
         "import dateFormatter from \"../../helpers/dateFormatter\";",
         "import Avatar from \"../Avatar\";"
       ],
-      "updatedAt": 1780850542536
+      "updatedAt": 1780858756010
     },
     "frontend/src/components/ArticleMeta/index.js": {
       "path": "frontend/src/components/ArticleMeta/index.js",
@@ -1194,19 +1194,19 @@
     },
     "frontend/src/components/ArticlesPreview/ArticlesPreview.jsx": {
       "path": "frontend/src/components/ArticlesPreview/ArticlesPreview.jsx",
-      "hash": "cd873ba8a04a55a1e6390ac3d5acec2752162b41295bd86b61e2b0a4e6ed3056",
-      "bytes": 1569,
-      "summary": "该React组件接收文章列表、加载状态等参数，渲染文章预览卡片，处理收藏交互，适配加载态与空数据态展示",
+      "hash": "cf6351ea3d2fe2ec95c141d8a3c490cbfa86c4330780d4fdf9efcb4512b84c72",
+      "bytes": 1954,
+      "summary": "该React组件渲染文章预览列表，处理收藏交互，适配加载、空数据状态，支持跳转文章详情页",
       "tags": [
         "react",
         "jsx",
-        "文章预览",
-        "前端组件",
-        "收藏交互",
-        "列表渲染"
+        "article preview",
+        "frontend",
+        "list render"
       ],
       "symbols": [
         "ArticlesPreview",
+        "DEFAULT_COVER_PLACEHOLDER",
         "handleFav"
       ],
       "imports": [
@@ -1215,7 +1215,7 @@
         "import ArticleTags from \"../ArticleTags\";",
         "import FavButton from \"../FavButton\";"
       ],
-      "updatedAt": 1780850541964
+      "updatedAt": 1780859074494
     },
     "frontend/src/components/ArticlesPreview/index.js": {
       "path": "frontend/src/components/ArticlesPreview/index.js",
@@ -2291,16 +2291,16 @@
     },
     "frontend/src/main.jsx": {
       "path": "frontend/src/main.jsx",
-      "hash": "da408ab29e032ecfbdf2a57e8d02617c106a03433051c398c7b829688511d915",
-      "bytes": 2454,
-      "summary": "React应用入口文件，挂载根DOM节点，配置全量路由规则、注入全局认证上下文，引入全局样式并启动性能上报",
+      "hash": "979365a8af9870944536b4c07176a3cccd90349f58219617378b1f371423d8af",
+      "bytes": 2330,
+      "summary": "React应用入口文件，挂载根DOM节点，配置Hash路由与全局Auth鉴权上下文，注册所有业务页面对应路由规则",
       "tags": [
         "react",
-        "entry file",
-        "route config",
-        "auth provider",
+        "前端入口",
+        "路由配置",
+        "状态上下文",
         "spa",
-        "前端初始化"
+        "页面注册"
       ],
       "symbols": [
         "ReactDOM",
@@ -2320,7 +2320,7 @@
         "import \"./index.css\";",
         "import reportWebVitals from \"./reportWebVitals\";"
       ],
-      "updatedAt": 1780850777003
+      "updatedAt": 1780849505167
     },
     "frontend/src/reportWebVitals.js": {
       "path": "frontend/src/reportWebVitals.js",
@@ -2342,16 +2342,16 @@
     },
     "frontend/src/routes/Article/Article.jsx": {
       "path": "frontend/src/routes/Article/Article.jsx",
-      "hash": "396d8784915217eb2555afcb2a671b0482d1786a27ebfeb55c44420f0929d9c3",
-      "bytes": 1997,
-      "summary": "该React文章详情组件，优先读取路由状态缓存，无缓存时按slug拉取文章数据，渲染内容、元信息并支持嵌套路由",
+      "hash": "16a1599776cf3e0ac2ea4dbf8171381c6d5c4fe68916eaa194b890299c3f35dd",
+      "bytes": 2619,
+      "summary": "实现文章详情页逻辑，优先复用路由状态，无数据时调用接口拉取文章，渲染封面、元信息、Markdown正文，异常跳转404",
       "tags": [
         "react",
-        "jsx",
-        "文章详情",
+        "article detail",
+        "markdown render",
         "前端组件",
-        "markdown渲染",
-        "路由处理"
+        "路由钩子",
+        "状态管理"
       ],
       "symbols": [
         "Article"
@@ -2366,19 +2366,19 @@
         "import BannerContainer from \"../../components/BannerContainer\";",
         "import { useAuth } from \"../../context/AuthContext\";"
       ],
-      "updatedAt": 1780849507514
+      "updatedAt": 1780859078110
     },
     "frontend/src/routes/Article/CommentsSection.jsx": {
       "path": "frontend/src/routes/Article/CommentsSection.jsx",
       "hash": "565c4529374a5b61464ed71e4872eed11918f9e207a0aa1275fabf61d7f6200e",
       "bytes": 599,
-      "summary": "该React组件是文章页评论区容器，维护评论状态，联动评论编辑、评论列表子组件实现评论相关交互",
+      "summary": "该React组件是文章详情页的评论区容器，维护评论状态，挂载评论编辑、评论列表子组件实现评论交互。",
       "tags": [
         "react",
         "jsx",
         "评论区",
         "前端组件",
-        "文章页",
+        "文章模块",
         "状态管理"
       ],
       "symbols": [
@@ -2390,7 +2390,7 @@
         "import CommentEditor from \"../../components/CommentEditor\";",
         "import CommentList from \"../../components/CommentList\";"
       ],
-      "updatedAt": 1780850542518
+      "updatedAt": 1780858758922
     },
     "frontend/src/routes/ArticleEditor.jsx": {
       "path": "frontend/src/routes/ArticleEditor.jsx",
@@ -2821,14 +2821,14 @@
     },
     "frontend/src/services/setArticle.js": {
       "path": "frontend/src/services/setArticle.js",
-      "hash": "60133da53706c3c2aa71fe22f217e30adf21870380ccfae556de54a8d64b9318",
-      "bytes": 517,
-      "summary": "导出异步setArticle函数，通过axios调用后端接口，支持新建或更新文章，异常统一处理，返回对应文章的slug标识",
+      "hash": "87eb890146d90557439bdc70c09a43339f749aff71ace28fcb6d8cb6c140b286",
+      "bytes": 539,
+      "summary": "导出异步setArticle函数，根据是否传入slug自动切换POST/PUT请求，完成文章新增或更新，异常时调用统一错误处理器",
       "tags": [
+        "前端",
         "axios",
-        "文章管理",
+        "文章服务",
         "接口请求",
-        "前端服务",
         "异步函数"
       ],
       "symbols": [
@@ -2838,7 +2838,7 @@
         "import axios from \"axios\";",
         "import errorHandler from \"../helpers/errorHandler\";"
       ],
-      "updatedAt": 1780849522799
+      "updatedAt": 1780859074419
     },
     "frontend/src/services/toggleFav.js": {
       "path": "frontend/src/services/toggleFav.js",
@@ -3087,50 +3087,24 @@
       ],
       "updatedAt": 1780849532454
     },
-    "backend/migrations/20240520000000-add-article-status-field.js": {
-      "path": "backend/migrations/20240520000000-add-article-status-field.js",
-      "hash": "c1b7b7438094fc7be5b796804d40ed24e3f15d973fac377d80aa999f75a01a25",
-      "bytes": 451,
-      "summary": "该Sequelize迁移脚本为Articles表新增非空文章状态枚举字段，down方法支持回滚删除该字段",
+    "backend/migrations/20240520000000-add-coverImage-to-articles.js": {
+      "path": "backend/migrations/20240520000000-add-coverImage-to-articles.js",
+      "hash": "8ba541b6cf2c187fbee44235c3bdbb404de936504e272ea566be8c0cd0cd2b53",
+      "bytes": 381,
+      "summary": "该Sequelize迁移文件，执行up时为Articles表新增可空的coverImage字符串字段，down方法回滚删除该字段",
       "tags": [
         "sequelize",
+        "migration",
         "数据库迁移",
         "字段新增",
-        "文章表",
-        "回滚脚本"
+        "articles表"
       ],
       "symbols": [
         "up",
         "down"
       ],
       "imports": [],
-      "updatedAt": 1780850774662
-    },
-    "frontend/src/routes/Profile/ProfileDraftsArticles.jsx": {
-      "path": "frontend/src/routes/Profile/ProfileDraftsArticles.jsx",
-      "hash": "7f4567125f3ccb86ff58128220a447fea9309a59e522a88e75be6f622dfc5cc7",
-      "bytes": 2307,
-      "summary": "该React组件是个人页草稿文章列表模块，分页拉取当前用户草稿，处理加载/空态，渲染预览与分页控件",
-      "tags": [
-        "react",
-        "个人中心",
-        "草稿文章",
-        "文章列表",
-        "分页",
-        "前端组件"
-      ],
-      "symbols": [
-        "ProfileDraftsArticles"
-      ],
-      "imports": [
-        "import { useState, useEffect } from 'react';",
-        "import { get } from '../../utils/request';",
-        "import { useAuth } from '../../contexts/AuthContext';",
-        "import ArticlesPreview from '../../components/Articles/ArticlesPreview';",
-        "import ArticlesPagination from '../../components/Articles/ArticlesPagination';",
-        "import Spinner from '../../components/Common/Spinner';"
-      ],
-      "updatedAt": 1780850778923
+      "updatedAt": 1780859070487
     }
   }
 }

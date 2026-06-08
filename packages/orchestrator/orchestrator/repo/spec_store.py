@@ -77,7 +77,7 @@ def should_index(relative_path: str, absolute_path: Path) -> bool:
 def list_indexable_files(repo_path: Path) -> list[str]:
     files: list[str] = []
     try:
-        r = subprocess.run(["git", "ls-files"], cwd=repo_path, capture_output=True, text=True, timeout=20)
+        r = subprocess.run(["git", "ls-files"], cwd=repo_path, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=20)
         if r.returncode == 0:
             for line in r.stdout.splitlines():
                 rel = line.strip().replace("\\", "/")

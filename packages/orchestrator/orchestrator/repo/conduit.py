@@ -15,6 +15,13 @@ ROOT = Path(__file__).resolve().parents[4]
 DEFAULT_CONDUIT_PATH = ROOT / "workspace" / "conduit"
 REPOS_DIR = ROOT / "workspace" / "repos"
 
+# 终端 ANSI 转义序列（颜色、光标控制等），用于把工具彩色输出清洗成纯文本
+_ANSI_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
+
+
+def _strip_ansi(text: str) -> str:
+    return _ANSI_RE.sub("", text or "")
+
 
 def _parse_nwo(repo_url: str) -> str:
     m = re.search(r"github\.com[/:]([^/]+/[^/]+?)(?:\.git)?$", repo_url)
@@ -59,7 +66,7 @@ class ConduitRepo:
             subprocess.run(["gh", "api", f"repos/{nwo}/forks", "-X", "POST"], capture_output=True)
 
             # Get authenticated username
-            r = subprocess.run(["gh", "api", "user", "-q", ".login"], capture_output=True, text=True, check=True)
+            r = subprocess.run(["gh", "api", "user", "-q", ".login"], capture_output=True, text=True, encoding="utf-8", errors="replace", check=True)
             username = r.stdout.strip()
 
             # Set up remotes: origin → fork, upstream → original
@@ -110,7 +117,7 @@ class ConduitRepo:
         for rel in target_files or []:
             path = self.repo_path / rel
             if path.exists() and path.suffix == ".js":
-                r = subprocess.run(["node", "--check", str(path)], capture_output=True, text=True, timeout=10)
+                r = subprocess.run(["node", "--check", str(path)], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=10)
                 if r.returncode != 0:
                     errors.append(f"{rel}: {(r.stderr or '').splitlines()[:3]}")
         if errors:
@@ -156,14 +163,16 @@ class ConduitRepo:
         if not npm:
             return VerifyResult(True, "[verify skipped] npm not found on PATH; syntax guard completed.", "", 0)
 
+        # 从源头关闭彩色输出（vitest 等多数工具识别 NO_COLOR），再兜底清洗 ANSI 转义序列
         r = subprocess.run(
             [npm, "test", "--", "--run"],
             cwd=self.repo_path,
             capture_output=True,
-            text=True,
+            text=True, encoding="utf-8", errors="replace",
             timeout=120,
+            env={**os.environ, "NO_COLOR": "1", "FORCE_COLOR": "0"},
         )
-        return VerifyResult(r.returncode == 0, r.stdout or "", r.stderr or "", r.returncode)
+        return VerifyResult(r.returncode == 0, _strip_ansi(r.stdout or ""), _strip_ansi(r.stderr or ""), r.returncode)
 
     def get_context(self) -> RepoContext:
         branch = "main"
@@ -172,7 +181,7 @@ class ConduitRepo:
                 ["git", "rev-parse", "--abbrev-ref", "HEAD"],
                 cwd=self.repo_path,
                 capture_output=True,
-                text=True,
+                text=True, encoding="utf-8", errors="replace",
                 timeout=10,
             )
             if r.returncode == 0:
@@ -182,14 +191,14 @@ class ConduitRepo:
         return RepoContext(repoPath=str(self.repo_path), branch=branch)
 
     def checkout_branch(self, branch: str) -> None:
-        branches = subprocess.run(["git", "branch", "--list", branch], cwd=self.repo_path, capture_output=True, text=True)
+        branches = subprocess.run(["git", "branch", "--list", branch], cwd=self.repo_path, capture_output=True, text=True, encoding="utf-8", errors="replace")
         if branches.stdout.strip():
             subprocess.run(["git", "checkout", branch], cwd=self.repo_path, check=True)
         else:
             subprocess.run(["git", "checkout", "-b", branch], cwd=self.repo_path, check=True)
 
     def _run_git(self, args: list[str]) -> subprocess.CompletedProcess[str]:
-        r = subprocess.run(["git", *args], cwd=self.repo_path, capture_output=True, text=True)
+        r = subprocess.run(["git", *args], cwd=self.repo_path, capture_output=True, text=True, encoding="utf-8", errors="replace")
         if r.returncode != 0:
             detail = (r.stderr or r.stdout or "").strip()
             raise RuntimeError(f"git {' '.join(args)} failed: {detail}")
@@ -211,13 +220,13 @@ class ConduitRepo:
             ["git", "symbolic-ref", "--short", f"refs/remotes/{remote}/HEAD"],
             cwd=self.repo_path,
             capture_output=True,
-            text=True,
+            text=True, encoding="utf-8", errors="replace",
         )
         if r.returncode == 0 and "/" in r.stdout.strip():
             return r.stdout.strip().split("/", 1)[1]
 
         for branch in ("main", "master"):
-            r = subprocess.run(["git", "rev-parse", "--verify", f"{remote}/{branch}"], cwd=self.repo_path, capture_output=True, text=True)
+            r = subprocess.run(["git", "rev-parse", "--verify", f"{remote}/{branch}"], cwd=self.repo_path, capture_output=True, text=True, encoding="utf-8", errors="replace")
             if r.returncode == 0:
                 return branch
         raise RuntimeError(f"Cannot determine default branch for remote {remote}")
@@ -229,7 +238,7 @@ class ConduitRepo:
 
         remote = self._original_remote()
         self._run_git(["fetch", remote, "--prune"])
-        subprocess.run(["git", "remote", "set-head", remote, "-a"], cwd=self.repo_path, capture_output=True, text=True)
+        subprocess.run(["git", "remote", "set-head", remote, "-a"], cwd=self.repo_path, capture_output=True, text=True, encoding="utf-8", errors="replace")
         branch = self._remote_default_branch(remote)
         self._run_git(["checkout", "-B", branch, f"{remote}/{branch}"])
         self._run_git(["reset", "--hard", f"{remote}/{branch}"])
@@ -252,14 +261,14 @@ class ConduitRepo:
         cmd = ["gh", "pr", "create", "--title", title, "--body", body, "--base", "main", "--head", branch]
         if self.upstream_nwo:
             cmd += ["--repo", self.upstream_nwo]
-        r = subprocess.run(cmd, cwd=self.repo_path, capture_output=True, text=True, check=True)
+        r = subprocess.run(cmd, cwd=self.repo_path, capture_output=True, text=True, encoding="utf-8", errors="replace", check=True)
         return r.stdout.strip()
 
     def get_diff(self, base: str = "HEAD") -> str:
-        r = subprocess.run(["git", "diff", base], cwd=self.repo_path, capture_output=True, text=True)
+        r = subprocess.run(["git", "diff", base], cwd=self.repo_path, capture_output=True, text=True, encoding="utf-8", errors="replace")
         if r.returncode == 0:
             return r.stdout
-        return subprocess.run(["git", "diff"], cwd=self.repo_path, capture_output=True, text=True).stdout
+        return subprocess.run(["git", "diff"], cwd=self.repo_path, capture_output=True, text=True, encoding="utf-8", errors="replace").stdout
 
 
 def create_conduit_repo() -> ConduitRepo:

@@ -82,7 +82,16 @@ async def default_locate(
                 if ref_path and ref_content:
                     references[step.path] = {"path": ref_path, "content": ref_content}
         files.append(FileChange(path=step.path, reason=step.instruction))
-    return ChangeSet(files=files, context=context, meta={"skillName": plan.skillName, "steps": plan.files, "references": references})
+    return ChangeSet(
+        files=files,
+        context=context,
+        meta={
+            "skillName": plan.skillName,
+            "steps": plan.files,
+            "references": references,
+            "contract": getattr(plan, "contract", ""),
+        },
+    )
 
 
 def _strip_code_fence(text: str) -> str:
@@ -103,33 +112,65 @@ async def run_llm_on_file(
     reference: dict[str, str] | None,
     meta: dict[str, int | str],
 ) -> FilePatch:
-    if mode == "modify":
-        user = f"""文件路径：{path}
+    attempt = int(meta.get("attempt", 1))
+    verify_error = str(meta.get("verifyError", "")).strip()
+    verify_stdout = str(meta.get("verifyStdout", "")).strip()
+    contract = str(meta.get("contract", "")).strip()
+    plan_files = str(meta.get("planFiles", "")).strip()
 
-当前内容：
+    shared_block = ""
+    if plan_files or contract:
+        shared_block = "本次需求会改动以下多个文件，你只负责其中当前这一个，但必须与其它文件保持一致：\n"
+        if plan_files:
+            shared_block += f"{plan_files}\n"
+        if contract:
+            shared_block += (
+                "\n以下是跨文件必须严格共用的接口约定（组件名/默认导出名/import 路径/接口地址/字段名与枚举取值等），"
+                "务必原样使用，绝对不要自行改名或换路径：\n"
+                f"{contract}\n"
+            )
+        shared_block += "\n----\n\n"
+
+    if mode == "modify":
+        body = f"""文件路径：{path}
+
+当前内容{"（上一次生成的版本，验证未通过）" if verify_error or verify_stdout else ""}：
 {current_content}
 
 修改任务：
-{instruction}
-
-返回完整的修改后文件内容："""
+{instruction}"""
+        tail = "返回完整的修改后文件内容："
     else:
         ref_block = ""
         if reference:
             ref_block = f"\n参考样例文件（{reference['path']}）：\n{reference['content']}\n"
-        user = f"""从空白新建文件：{path}
-{ref_block}
-创建任务：
+        prev_block = ""
+        if (verify_error or verify_stdout) and current_content.strip():
+            prev_block = f"\n上一次生成的内容（验证未通过，在此基础上修复）：\n{current_content}\n"
+        body = f"""从空白新建文件：{path}
+{ref_block}创建任务：
 {instruction}
+{prev_block}"""
+        tail = "返回该文件的完整内容："
 
-返回该文件的完整内容："""
+    error_block = ""
+    if verify_error or verify_stdout:
+        error_block = f"""
+
+上一次生成的代码验证未通过（这是第 {attempt} 次尝试）。请仔细阅读下面的验证报错，针对性修复后确保本次通过；只改必要之处，不要重写无关逻辑，也不要引入未使用依赖：
+[stderr]
+{verify_error or "(空)"}
+[stdout]
+{verify_stdout or "(空)"}"""
+
+    user = f"{shared_block}{body}{error_block}\n\n{tail}"
     result = await llm.chat(
         [
             {"role": "system", "content": "你是专业代码助手。只返回完整文件内容，不加 markdown，不加解释。保持项目风格，不引入未使用依赖。"},
             {"role": "user", "content": user},
         ],
         {"temperature": 0.1, "maxTokens": 4096},
-        {"agent": meta["agent"], "attempt": meta["attempt"]},
+        {"agent": meta["agent"], "attempt": attempt},
     )
     return FilePatch(path=path, newContent=_strip_code_fence(result["text"]))
 
@@ -139,13 +180,19 @@ async def default_generate(changes: ChangeSet, llm: LLMClient) -> list[FilePatch
     refs = changes.meta.get("references", {})
     skill_name = str(changes.meta.get("skillName", "unknown"))
     attempt = int(changes.meta.get("attempt", 1))
+    verify_error = str(changes.meta.get("verifyError", ""))
+    verify_stdout = str(changes.meta.get("verifyStdout", ""))
+    contract = str(changes.meta.get("contract", ""))
+
+    # 把整张文件清单渲染给每个文件生成调用，让各文件互相“看得见”，避免命名/接口漂移
+    normalized_steps = [s if isinstance(s, FileStep) else FileStep(**s) for s in steps]
+    plan_files = "\n".join(f"- [{s.mode}] {s.path}：{s.instruction}" for s in normalized_steps)
+
     patches: list[FilePatch] = []
     for idx, fc in enumerate(changes.files):
-        if idx >= len(steps):
+        if idx >= len(normalized_steps):
             continue
-        step = steps[idx]
-        if isinstance(step, dict):
-            step = FileStep(**step)
+        step = normalized_steps[idx]
         patch = await run_llm_on_file(
             llm,
             fc.path,
@@ -153,7 +200,14 @@ async def default_generate(changes: ChangeSet, llm: LLMClient) -> list[FilePatch
             step.mode,
             step.instruction,
             refs.get(fc.path),
-            {"agent": f"code:{skill_name}", "attempt": attempt},
+            {
+                "agent": f"code:{skill_name}",
+                "attempt": attempt,
+                "verifyError": verify_error,
+                "verifyStdout": verify_stdout,
+                "contract": contract,
+                "planFiles": plan_files,
+            },
         )
         patches.append(patch)
     return patches

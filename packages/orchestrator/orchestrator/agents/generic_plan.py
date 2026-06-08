@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from orchestrator.llm.doubao import LLMClient
 from orchestrator.skills.base import Skill, default_generate, default_locate
 from orchestrator.types import ClarifiedRequest, FileStep, RepoContext, SkillPlan
 
-MAX_GENERIC_FILES = 6
+MAX_GENERIC_FILES = 12
 
 
 def _list_dir(root: Path, relative: str, depth: int) -> list[str]:
@@ -39,6 +40,22 @@ def _list_files(root: Path, relative: str) -> list[str]:
     return sorted(str(p.relative_to(root)).replace("\\", "/") for p in path.iterdir() if p.is_file())
 
 
+def _existing_db_tables(root: Path) -> list[str]:
+    """从既有 migration 的 createTable 调用里提取真实表名，供新建/修改 migration 照抄（避免大小写/复数臆造）。"""
+    names: set[str] = set()
+    mig_dir = root / "backend" / "migrations"
+    if not mig_dir.exists():
+        return []
+    for f in sorted(mig_dir.glob("*.js")):
+        try:
+            text = f.read_text(encoding="utf-8", errors="ignore")
+        except Exception:
+            continue
+        for m in re.finditer(r"""createTable\(\s*['"]([^'"]+)['"]""", text):
+            names.add(m.group(1))
+    return sorted(names)
+
+
 def get_repo_overview(ctx: RepoContext) -> str:
     root = Path(ctx.repoPath)
     return "\n".join(
@@ -47,6 +64,10 @@ def get_repo_overview(ctx: RepoContext) -> str:
             f"当前分支：{ctx.branch}",
             "--- 目录树（最多 2 层）---",
             "\n".join(_list_dir(root, "", 2)[:220]),
+            "--- 既有数据库表名（来自 migrations 的 createTable，新建/修改 migration 必须照抄，注意大小写与单复数）---",
+            ", ".join(_existing_db_tables(root)) or "(未发现)",
+            "--- 后端 migration 文件 ---",
+            "\n".join(_list_files(root, "backend/migrations")),
             "--- 前端入口文件 ---",
             f"--- frontend/src/App.jsx ---\n{_safe_read(root, 'frontend/src/App.jsx')}",
             f"--- frontend/src/main.jsx ---\n{_safe_read(root, 'frontend/src/main.jsx')}",
@@ -72,7 +93,7 @@ def _clean_json(text: str) -> str:
     return s.strip()
 
 
-def parse_plan(text: str) -> list[FileStep]:
+def parse_plan(text: str) -> tuple[list[FileStep], str]:
     cleaned = _clean_json(text)
     try:
         data = json.loads(cleaned)
@@ -85,8 +106,14 @@ def parse_plan(text: str) -> list[FileStep]:
     files = data.get("files")
     if not isinstance(files, list):
         raise ValueError("genericPlan 没有返回 files 数组")
+    # 不静默截断：规划文件数超过保险上限时显式报错，避免悄悄丢掉路由/导航这类配套文件
+    if len(files) > MAX_GENERIC_FILES:
+        raise ValueError(
+            f"genericPlan 规划了 {len(files)} 个文件，超过上限 {MAX_GENERIC_FILES}；"
+            f"需求可能过大，建议拆分后分多次执行，或调高 MAX_GENERIC_FILES。"
+        )
     steps: list[FileStep] = []
-    for i, f in enumerate(files[:MAX_GENERIC_FILES]):
+    for i, f in enumerate(files):
         path = str(f.get("path", "")).strip()
         mode = f.get("mode")
         instruction = str(f.get("instruction", "")).strip()
@@ -97,7 +124,8 @@ def parse_plan(text: str) -> list[FileStep]:
         if not instruction:
             raise ValueError(f"genericPlan.files[{i}] 缺少 instruction")
         steps.append(FileStep(path=path, mode=mode, instruction=instruction))
-    return steps
+    contract = str(data.get("contract", "")).strip()
+    return steps, contract
 
 
 def _fallback_plan(req: ClarifiedRequest, ctx: RepoContext) -> SkillPlan:
@@ -164,14 +192,17 @@ async def generic_plan(
 {code_spec_context or "暂无代码规范索引。"}
 
 输出 JSON，格式必须是：
-{{"files":[{{"path":"相对路径","mode":"modify|create","instruction":"具体实现说明"}}]}}
+{{"contract":"跨文件必须一致的接口约定","files":[{{"path":"相对路径","mode":"modify|create","instruction":"具体实现说明"}}]}}
 
 要求：
 - path 必须相对 Conduit 仓库根目录。
 - mode="modify" 时，path 必须是真实存在的文件，或能从仓库概览中明确判断为已存在文件。
 - mode="create" 时，path 必须放在符合现有约定的位置。
-- 不要超过 6 个文件；典型需求控制在 2-4 个文件。
-- instruction 要写清楚本文件具体改什么，不能只写“修改这个文件”。
+- **功能要从头管到尾，一个都不能漏**：后端新增 controller 处理逻辑就必须同时改对应的路由注册文件把它挂上；前端新增页面/Tab 就必须同时改路由表和导航入口文件；新增数据库字段就必须同时新建 migration。不要只做一半。
+- contract 字段：把多个文件之间**必须保持一致**的名字都在这里钉死，供所有文件严格共用，例如：新建组件的文件名与默认导出名、前端 import 路径、后端 API 路径（如 GET /articles/drafts）、字段名与枚举取值、函数/导出名等。下面每个文件的 instruction 都必须与 contract 完全一致，不得自行改名。
+- contract 还必须包含**既有事实**（不要臆造，要从上面的仓库概览中照抄）：涉及的数据库表名（严格照抄“既有数据库表名”中的大小写与单复数，例如 Articles 而不是 articles）、要复用的现有模型名/控制器导出名/路由前缀等。新建 migration、新增 controller/route 时必须使用这些既有名称。
+- instruction 要写清楚本文件具体改什么，不能只写“修改这个文件”，并显式引用 contract 里的名字（例如“import 路径用 contract 中的 X”）。
+- 文件数按需求实际需要来定，不要为了凑数硬塞，也不要为省事漏掉配套文件；上限 {MAX_GENERIC_FILES} 个。
 """,
             },
         ],
@@ -179,10 +210,10 @@ async def generic_plan(
         {"agent": "plan:generic"},
     )
     try:
-        files = parse_plan(result["text"])
+        files, contract = parse_plan(result["text"])
     except Exception:
         return _fallback_plan(req, ctx)
-    return SkillPlan(skillName="generic", files=files)
+    return SkillPlan(skillName="generic", files=files, contract=contract)
 
 
 class GenericSkill(Skill):

@@ -323,6 +323,8 @@ async def _run_code_and_verify(run_id: str, skill, changes: ChangeSet, llm, repo
             raise RuntimeError(f"verify 失败，已重试 {MAX_VERIFY_RETRIES} 次")
         attempt += 1
         changes.meta = {**changes.meta, "verifyError": result.stderr[:2000], "verifyStdout": result.stdout[:2000]}
+        # 让下一次重试看到自己上一次生成的（未通过的）内容，而不是 locate 时抓的原始内容
+        changes.context = {**changes.context, **{p.path: p.newContent for p in patches}}
 
 
 async def replay_from(run_id: str, from_event_index: int, new_raw_text: str) -> None:

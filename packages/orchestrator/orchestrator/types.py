@@ -40,6 +40,8 @@ class FileStep:
 class SkillPlan:
     skillName: str
     files: list[FileStep]
+    # 跨文件必须一致的接口约定（组件名/导入路径/接口地址/字段名等），由规划阶段产出，生成阶段严格遵守
+    contract: str = ""
 
 
 @dataclass
