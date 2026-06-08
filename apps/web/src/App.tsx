@@ -107,6 +107,15 @@ export default function App() {
     verify: "验证中…", commit: "提交中…", pr: "提交 PR…", done: "完成", stopping: "停止中…", cancelled: "已停止", replaying: "重放中…",
   };
 
+  // 状态条用：通俗易懂的中文阶段名（不带“…”，省略号由动画补）
+  const stageWord: Record<string, string> = {
+    starting: "启动", recall: "查历史", "code-spec": "读代码规范", plan: "规划",
+    clarify: "等你回答", locate: "找要改的文件", code: "写代码", verify: "验证代码",
+    "code-spec:update": "更新代码规范", commit: "提交代码", pr: "提交 PR", replaying: "重放",
+  };
+  const stageActive = running && !state.done && !state.error;
+  const stageWordText = state.waitingForAnswers ? "等你回答" : (stageWord[state.stage] ?? "处理");
+
   const summary = globalMetrics
     ? `${globalMetrics.totalRuns} runs · ${globalMetrics.overall.count} calls · ${fmtCost(globalMetrics.overall.totalCostCNY)}`
     : "metrics pending";
@@ -209,8 +218,18 @@ export default function App() {
 
             {activityTab === "events" ? (
               <div className="event-stream" ref={feedRef}>
-                {state.events.filter((ev) => ev.type !== "recall.matched").length === 0 && !state.error && (
-                  <div className="activity-empty">运行阶段信息会显示在这里</div>
+                {stageActive ? (
+                  <div className="stage-bar">
+                    <span className="stage-icon"><i className="ti ti-activity" aria-hidden="true" /></span>
+                    <span className="stage-text">
+                      {stageWordText}中
+                      <span className="stage-dots"><i /><i /><i /></span>
+                    </span>
+                  </div>
+                ) : (
+                  state.events.filter((ev) => ev.type !== "recall.matched").length === 0 && !state.error && (
+                    <div className="activity-empty">运行阶段信息会显示在这里</div>
+                  )
                 )}
                 {state.events
                   .filter((ev) => ev.type !== "recall.matched")

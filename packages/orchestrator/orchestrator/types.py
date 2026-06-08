@@ -68,6 +68,8 @@ class RepoContext:
     repoPath: str
     branch: str
     codeSpecContext: str | None = None
+    # 选中相关文件的“符号地图”（path + 导出符号 + 真实 import 写法），喂给生成阶段做 grounding
+    codeSpecSymbolMap: str | None = None
 
 
 @dataclass

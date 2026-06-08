@@ -3,7 +3,7 @@
   "repoNwo": "riene999/conduit-realworld-example-app",
   "repoPath": "D:\\Code\\super-individual\\workspace\\repos\\riene999\\conduit-realworld-example-app",
   "branch": "main",
-  "updatedAt": 1780940592813,
+  "updatedAt": 1780944999260,
   "files": {
     "CODE_OF_CONDUCT.md": {
       "path": "CODE_OF_CONDUCT.md",
@@ -93,32 +93,29 @@
     },
     "backend/controllers/comments.js": {
       "path": "backend/controllers/comments.js",
-      "hash": "2b48b98351383ffd84b811f3383b44fbd6daa23d0208561f65fe0fdaf72b9a3c",
-      "bytes": 4330,
-      "summary": "该文件为后端评论控制器，实现文章评论的查询、创建、删除、点赞/取消点赞逻辑，包含权限校验与关联数据组装",
+      "hash": "3859ce1ea199365d60ed8f9ccb9d076b51c5bf6c483d8e99ef3bbb5709167358",
+      "bytes": 3707,
+      "summary": "该文件是评论控制器，实现文章评论的列表查询、创建、删除、点赞切换功能，包含权限校验与关联数据处理。",
       "tags": [
         "comment controller",
+        "rest api",
         "sequelize",
-        "后端接口",
         "权限校验",
-        "文章评论",
-        "点赞功能",
-        "restful",
-        "业务逻辑"
+        "评论管理",
+        "后端接口"
       ],
       "symbols": [
         "allComments",
         "createComment",
         "deleteComment",
-        "likeComment",
-        "unlikeComment"
+        "commentLikeToggler"
       ],
       "imports": [
         "} = require(\"../helper/customErrors\");",
         "const { appendFollowers } = require(\"../helper/helpers\");",
         "const { Article, Comment, User, CommentLike } = require(\"../models\");"
       ],
-      "updatedAt": 1780940587020
+      "updatedAt": 1780944993091
     },
     "backend/controllers/favorites.js": {
       "path": "backend/controllers/favorites.js",
@@ -484,14 +481,14 @@
       "path": "backend/models/Article.js",
       "hash": "bd05fa323c3f6e9271bdff7c42ec0de941f79144ee77973d44ef6dad88110bd4",
       "bytes": 1381,
-      "summary": "该文件是Sequelize的Article文章数据模型，定义字段，配置与用户、评论、标签的关联，序列化时隐藏内部id和userId",
+      "summary": "该文件是Sequelize的Article文章数据模型，定义文章核心字段，配置多表关联，自定义序列化隐藏内部id与userId字段。",
       "tags": [
         "sequelize",
         "orm",
-        "article模型",
         "数据模型",
-        "关联定义",
-        "后端"
+        "article",
+        "后端",
+        "文章管理"
       ],
       "symbols": [
         "Article",
@@ -501,20 +498,20 @@
       "imports": [
         "const { Model } = require(\"sequelize\");"
       ],
-      "updatedAt": 1780940419222
+      "updatedAt": 1780944786384
     },
     "backend/models/Comment.js": {
       "path": "backend/models/Comment.js",
-      "hash": "b47e028dc90d61a00e8435336b9983fc9f8b1a1f53415756151eb0dc4b62c8f2",
-      "bytes": 1109,
-      "summary": "实现Sequelize评论数据模型，定义内容、点赞数字段，关联所属文章与作者，序列化时隐藏外键字段",
+      "hash": "c8b33aa9086ad352c3c8fc61d1f2e2b8f0767fe74248353a6da4a4f334e7031d",
+      "bytes": 1341,
+      "summary": "实现Sequelize的Comment评论模型，定义内容、点赞数字段，关联文章、用户与点赞关系，序列化时隐藏外键",
       "tags": [
         "sequelize",
+        "orm",
         "数据模型",
         "评论",
-        "orm",
-        "后端",
-        "数据库"
+        "comment",
+        "后端"
       ],
       "symbols": [
         "Comment",
@@ -524,7 +521,7 @@
       "imports": [
         "const { Model } = require(\"sequelize\");"
       ],
-      "updatedAt": 1780940587614
+      "updatedAt": 1780944994573
     },
     "backend/models/Tag.js": {
       "path": "backend/models/Tag.js",
@@ -573,16 +570,16 @@
     },
     "backend/models/index.js": {
       "path": "backend/models/index.js",
-      "hash": "81dc50a52b29a1b696e6c32ef1c9976890d7af2b9cac84a7c25b4fe98c2b8df7",
-      "bytes": 1081,
-      "summary": "作为Sequelize模型聚合入口，初始化数据库连接，加载所有模型并自动建立关联，导出统一数据库操作对象。",
+      "hash": "ac1685f1f40f9b5486b01ef22d5ab74496223bc5fd4cc82d467d5dbc5dfb622d",
+      "bytes": 936,
+      "summary": "作为Sequelize ORM模型聚合入口，自动加载同目录下所有业务模型，初始化关联，导出数据库操作集合",
       "tags": [
         "sequelize",
         "orm",
         "数据库模型",
+        "自动加载",
         "nodejs",
-        "后端",
-        "数据层"
+        "后端"
       ],
       "symbols": [
         "db",
@@ -593,9 +590,10 @@
         "const fs = require(\"fs\");",
         "const path = require(\"path\");",
         "const Sequelize = require(\"sequelize\");",
-        "const config = require(__dirname + \"/../config/config.js\")[env];"
+        "const config = require(__dirname + \"/../config/config.js\")[env];",
+        "const model = require(path.join(__dirname, file))("
       ],
-      "updatedAt": 1780940586148
+      "updatedAt": 1780944995218
     },
     "backend/package.json": {
       "path": "backend/package.json",
@@ -625,17 +623,18 @@
       "path": "backend/routes/articles.js",
       "hash": "dfd968265a6878dd2dd483916001c23ca14263ce43abafb3e142c7161e778aeb",
       "bytes": 996,
-      "summary": "该Express路由文件统一校验用户Token，提供文章CRUD、Feed流接口，挂载收藏、评论相关子路由",
+      "summary": "定义Express文章业务路由，所有接口前置Token校验，实现文章CRUD、Feed流，挂载收藏、评论子路由",
       "tags": [
         "express",
         "router",
         "articles",
-        "jwt认证",
-        "restful api",
-        "backend"
+        "jwt",
+        "restful",
+        "后端路由"
       ],
       "symbols": [
         "router",
+        "verifyToken",
         "allArticles",
         "createArticle",
         "singleArticle",
@@ -650,37 +649,34 @@
         "const favoritesRoutes = require(\"./articles/favorites\");",
         "const commentsRoutes = require(\"./articles/comments\");"
       ],
-      "updatedAt": 1780940418689
+      "updatedAt": 1780944788102
     },
     "backend/routes/articles/comments.js": {
       "path": "backend/routes/articles/comments.js",
-      "hash": "f4ce4d42c68a8acc55d8e67de0e35e755e8bfd20e7e22f66f4e349c302db0ebe",
-      "bytes": 782,
-      "summary": "定义文章评论相关Express路由，所有接口需鉴权，提供评论查询、新增、删除、点赞、取消点赞能力",
+      "hash": "cee0a2de74edc56c1746d866d72776dfd90dd995af29f711093b965155097461",
+      "bytes": 785,
+      "summary": "该文件为Express路由模块，挂载文章评论相关的5个需鉴权接口，实现评论查询、新增、点赞、取消点赞、删除操作",
       "tags": [
-        "express",
-        "router",
+        "express router",
         "评论接口",
-        "jwt鉴权",
-        "restful",
+        "restful api",
         "后端路由",
-        "文章模块"
+        "jwt鉴权"
       ],
       "symbols": [
         "router",
         "verifyToken",
         "allComments",
         "createComment",
-        "deleteComment",
-        "likeComment",
-        "unlikeComment"
+        "commentLikeToggler",
+        "deleteComment"
       ],
       "imports": [
         "const express = require(\"express\");",
         "const verifyToken = require(\"../../middleware/authentication\");",
         "} = require(\"../../controllers/comments\");"
       ],
-      "updatedAt": 1780940587254
+      "updatedAt": 1780944996057
     },
     "backend/routes/articles/favorites.js": {
       "path": "backend/routes/articles/favorites.js",
@@ -1040,13 +1036,14 @@
       "path": "frontend/src/components/ArticleMeta/ArticleMeta.jsx",
       "hash": "e3daa4a9a210348080f52703e6d2a949168bf1ae9728d05d636d59f626813db3",
       "bytes": 874,
-      "summary": "该React组件渲染文章元信息区域，展示作者头像、跳转链接、格式化发布日期，支持传入自定义子元素",
+      "summary": "React文章元信息展示组件，渲染作者头像、跳转个人页的用户名、格式化发布日期，支持传入自定义子内容",
       "tags": [
         "react组件",
         "jsx",
         "文章元信息",
         "路由跳转",
-        "日期格式化"
+        "日期格式化",
+        "用户头像展示"
       ],
       "symbols": [
         "ArticleMeta"
@@ -1056,7 +1053,7 @@
         "import dateFormatter from \"../../helpers/dateFormatter\";",
         "import Avatar from \"../Avatar\";"
       ],
-      "updatedAt": 1780940419889
+      "updatedAt": 1780944789867
     },
     "frontend/src/components/ArticleMeta/index.js": {
       "path": "frontend/src/components/ArticleMeta/index.js",
@@ -1200,14 +1197,14 @@
       "path": "frontend/src/components/ArticlesPreview/ArticlesPreview.jsx",
       "hash": "cd873ba8a04a55a1e6390ac3d5acec2752162b41295bd86b61e2b0a4e6ed3056",
       "bytes": 1569,
-      "summary": "该React组件接收文章列表、加载状态等参数，渲染文章预览，处理收藏交互，适配加载、无文章空态，支持跳转详情",
+      "summary": "该React组件渲染文章预览列表，适配加载态、空态，处理文章收藏更新，支持跳转至文章详情页",
       "tags": [
         "react",
         "jsx",
         "文章预览",
         "前端组件",
-        "文章列表",
-        "交互处理"
+        "交互逻辑",
+        "路由跳转"
       ],
       "symbols": [
         "ArticlesPreview",
@@ -1219,7 +1216,7 @@
         "import ArticleTags from \"../ArticleTags\";",
         "import FavButton from \"../FavButton\";"
       ],
-      "updatedAt": 1780940420386
+      "updatedAt": 1780944788026
     },
     "frontend/src/components/ArticlesPreview/index.js": {
       "path": "frontend/src/components/ArticlesPreview/index.js",
@@ -1467,21 +1464,19 @@
     },
     "frontend/src/components/CommentList/CommentList.jsx": {
       "path": "frontend/src/components/CommentList/CommentList.jsx",
-      "hash": "2c7424fdf6f9dbb07253696384907b1acda0809a61a1eb5d9515473ff9acf07e",
-      "bytes": 3312,
-      "summary": "该React组件展示文章评论列表，自动拉取对应文章评论，支持登录用户点赞、删除本人发布的评论",
+      "hash": "d47a644956eca888bc3a780e7878af6d2f3ba544c91c6489b433eeb524938843",
+      "bytes": 2054,
+      "summary": "该React组件渲染文章评论列表，支持拉取评论、经权限校验后删除本人评论，集成作者展示、点赞按钮子组件",
       "tags": [
         "react",
         "comment list",
         "前端组件",
         "评论管理",
-        "交互逻辑",
-        "权限校验"
+        "权限校验",
+        "列表渲染"
       ],
       "symbols": [
-        "CommentList",
-        "handleDeleteComment",
-        "handleLikeToggle"
+        "CommentList"
       ],
       "imports": [
         "import { useEffect, useState } from \"react\";",
@@ -1490,10 +1485,10 @@
         "import dateFormatter from \"../../helpers/dateFormatter\";",
         "import deleteComment from \"../../services/deleteComment\";",
         "import getComments from \"../../services/getComments\";",
-        "import likeComment from \"../../services/likeComment\";",
-        "import unlikeComment from \"../../services/unlikeComment\";"
+        "import CommentAuthor from \"./CommentAuthor\";",
+        "import CommentLikeButton from \"./CommentLikeButton\";"
       ],
-      "updatedAt": 1780940589194
+      "updatedAt": 1780944997249
     },
     "frontend/src/components/CommentList/index.js": {
       "path": "frontend/src/components/CommentList/index.js",
@@ -2377,14 +2372,14 @@
       "path": "frontend/src/routes/Article/CommentsSection.jsx",
       "hash": "565c4529374a5b61464ed71e4872eed11918f9e207a0aa1275fabf61d7f6200e",
       "bytes": 599,
-      "summary": "该React组件为文章页评论区容器，维护评论状态，联动评论编辑、评论列表子组件实现评论更新交互。",
+      "summary": "该React组件是文章页评论区容器，维护评论状态，集成评论编辑、列表子组件，处理评论更新交互。",
       "tags": [
         "react",
         "jsx",
-        "评论区",
-        "前端组件",
-        "文章页",
-        "状态联动"
+        "评论区组件",
+        "文章模块",
+        "前端",
+        "状态管理"
       ],
       "symbols": [
         "CommentsSection",
@@ -2395,7 +2390,7 @@
         "import CommentEditor from \"../../components/CommentEditor\";",
         "import CommentList from \"../../components/CommentList\";"
       ],
-      "updatedAt": 1780940419739
+      "updatedAt": 1780944788405
     },
     "frontend/src/routes/ArticleEditor.jsx": {
       "path": "frontend/src/routes/ArticleEditor.jsx",
@@ -3092,104 +3087,93 @@
       ],
       "updatedAt": 1780849532454
     },
-    "backend/migrations/20240000000000-add-likeCount-to-comment.js": {
-      "path": "backend/migrations/20240000000000-add-likeCount-to-comment.js",
-      "hash": "8e52a8d4f35fed54be5fd41cfe94058c543da7b4618e3cedc2e56dc4c9a93a11",
-      "bytes": 363,
-      "summary": "该Sequelize迁移文件为Comments评论表新增非空、默认值0的likeCount整数字段，down方法实现回滚删除该字段",
+    "backend/migrations/20250601000000-add-like-count-to-comment-and-create-comment-likes.js": {
+      "path": "backend/migrations/20250601000000-add-like-count-to-comment-and-create-comment-likes.js",
+      "hash": "f82c76f7790b641205ed0fa1381bcda6cdc1ec4528f360b631c37b8c88911fc8",
+      "bytes": 1353,
+      "summary": "该Sequelize迁移文件为Comments表新增likeCount字段，创建CommentLikes点赞关联表加唯一索引，down方法执行回滚",
       "tags": [
         "sequelize",
-        "数据库迁移",
-        "评论表",
-        "字段新增",
-        "点赞数",
-        "数据回滚"
-      ],
-      "symbols": [
-        "up",
-        "down"
-      ],
-      "imports": [],
-      "updatedAt": 1780940586813
-    },
-    "backend/migrations/20240000000001-create-comment-like.js": {
-      "path": "backend/migrations/20240000000001-create-comment-like.js",
-      "hash": "4cf52da142398a0d8ac73b9875f2990c6f160ccc2b021ee1efca9e7f13882f85",
-      "bytes": 1154,
-      "summary": "该Sequelize迁移文件用于创建CommentLikes评论点赞表，配置关联外键与用户评论联合唯一约束，回滚时删除该表",
-      "tags": [
-        "sequelize",
+        "migration",
         "数据库迁移",
         "评论点赞",
-        "外键约束",
-        "唯一约束"
+        "字段新增",
+        "表创建",
+        "唯一索引"
       ],
       "symbols": [
         "up",
         "down"
       ],
       "imports": [],
-      "updatedAt": 1780940589538
+      "updatedAt": 1780944994308
     },
     "backend/models/CommentLike.js": {
       "path": "backend/models/CommentLike.js",
-      "hash": "1b0b271853ea65174c7f5b35379d168c112a83131ec25e0eafdefeb717fb4634",
-      "bytes": 878,
-      "summary": "基于Sequelize定义评论点赞关联模型，存储用户点赞评论记录，配置联合唯一索引防重复点赞，关联用户与评论表。",
+      "hash": "41453af696be99a239ce594cc9e4052401a1890e7f084fb1289dd252ddcdde04",
+      "bytes": 1008,
+      "summary": "定义Sequelize评论点赞关联模型，存储用户点赞评论的关联数据，配置外键级联删除与用户-评论联合唯一索引",
       "tags": [
         "sequelize",
-        "orm模型",
+        "数据模型",
         "评论点赞",
-        "数据库表",
-        "外键关联",
-        "唯一索引"
+        "关联表",
+        "orm",
+        "后端"
       ],
       "symbols": [
         "CommentLike",
         "associate"
       ],
-      "imports": [],
-      "updatedAt": 1780940589511
+      "imports": [
+        "const { Model, DataTypes } = require(\"sequelize\");"
+      ],
+      "updatedAt": 1780944997071
     },
-    "frontend/src/services/likeComment.js": {
-      "path": "frontend/src/services/likeComment.js",
-      "hash": "1a988c85517ec4bd39cd56a4750328860ebde9bf17046a22016c0ed88496cd4d",
-      "bytes": 275,
-      "summary": "该文件封装评论点赞接口，传入文章slug与评论ID，调用封装的请求工具发POST请求，返回响应数据，异常直接抛出",
+    "frontend/src/components/CommentList/CommentLikeButton.jsx": {
+      "path": "frontend/src/components/CommentList/CommentLikeButton.jsx",
+      "hash": "0c491ba0af2cda16c1c186474ef090f58dbab960f73789e6e6843493a352c511",
+      "bytes": 1001,
+      "summary": "React评论点赞按钮组件，校验登录态，调用点赞接口切换点赞状态、更新计数，自带加载禁用逻辑",
       "tags": [
-        "前端",
-        "api服务",
+        "react",
+        "评论组件",
+        "点赞功能",
+        "前端交互",
+        "状态管理",
+        "权限校验"
+      ],
+      "symbols": [
+        "CommentLikeButton"
+      ],
+      "imports": [
+        "import { useState } from \"react\";",
+        "import { useAuth } from \"../../context/AuthContext\";",
+        "import toggleCommentLike from \"../../services/toggleCommentLike\";"
+      ],
+      "updatedAt": 1780944995487
+    },
+    "frontend/src/services/toggleCommentLike.js": {
+      "path": "frontend/src/services/toggleCommentLike.js",
+      "hash": "7ee6956123b1dec2572afa15d8d2fce364987f87997f6057a96ba76f7d2d2b82",
+      "bytes": 447,
+      "summary": "导出异步方法，根据评论当前点赞状态调用对应后端接口切换点赞状态，异常交由统一错误处理器处理",
+      "tags": [
+        "frontend",
         "评论点赞",
-        "异步请求",
-        "post请求"
+        "axios",
+        "接口请求",
+        "服务层",
+        "错误处理"
       ],
       "symbols": [
-        "likeComment"
+        "toggleCommentLike"
       ],
       "imports": [
-        "import request from '@/utils/request'"
+        "import axios from \"axios\";",
+        "import errorHandler from \"../helpers/errorHandler\";"
       ],
-      "updatedAt": 1780940592778
-    },
-    "frontend/src/services/unlikeComment.js": {
-      "path": "frontend/src/services/unlikeComment.js",
-      "hash": "fa5ec36ca080694c878ac1e47365fb533d13737c3a21461b6db8ac697db7c428",
-      "bytes": 179,
-      "summary": "该文件导出异步请求函数，发送DELETE请求，实现指定文章下对应评论的取消点赞接口调用逻辑",
-      "tags": [
-        "前端",
-        "接口服务",
-        "评论操作",
-        "delete请求",
-        "异步函数"
-      ],
-      "symbols": [
-        "unlikeComment"
-      ],
-      "imports": [
-        "import request from '@/utils/request'"
-      ],
-      "updatedAt": 1780940592813
+      "updatedAt": 1780944999260
     }
   }
 }

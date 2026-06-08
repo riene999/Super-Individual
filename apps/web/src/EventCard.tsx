@@ -8,6 +8,7 @@ interface EventStyle {
 
 const EVENT_STYLES: Record<string, EventStyle> = {
   "run.started":       { title: "Run started", icon: "ti-player-play", tone: "purple" },
+  "phase.start":       { title: "Phase start", icon: "ti-player-track-next", tone: "gray" },
   "clarify.questions": { title: "Clarify questions", icon: "ti-help", tone: "gray" },
   "clarify.done":      { title: "Clarify done", icon: "ti-check", tone: "success" },
   "plan.done":         { title: "Plan matched", icon: "ti-list-check", tone: "gray" },
@@ -157,6 +158,9 @@ function eventMeta(type: string, event: RunEvent): string {
 
 export default function EventCard({ event, index }: { event: RunEvent; index: number }) {
   const style = EVENT_STYLES[event.type] ?? { title: event.type, icon: "ti-circle", tone: "gray" as const };
+  const title = event.type === "phase.start"
+    ? `${String(event.payload.label ?? event.payload.phase ?? "阶段")} · start`
+    : style.title;
   const body = fmtPayload(event.type, event.payload);
 
   return (
@@ -164,7 +168,7 @@ export default function EventCard({ event, index }: { event: RunEvent; index: nu
       <div className={`event-icon ${style.tone}`}><i className={`ti ${style.icon}`} aria-hidden="true" /></div>
       <div className="event-body">
         <div className="event-head">
-          <span className="event-title">{style.title}</span>
+          <span className="event-title">{title}</span>
           <span className="event-meta">{eventMeta(event.type, event)}</span>
         </div>
         {body && <pre className="event-desc">{body}</pre>}

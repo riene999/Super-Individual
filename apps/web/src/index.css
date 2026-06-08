@@ -455,6 +455,60 @@ select:focus-visible {
   flex-shrink: 0;
 }
 
+/* 事件流顶部的当前阶段状态条 */
+.stage-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  border-radius: 10px;
+  border: 1px solid var(--accent, #2563eb);
+  background: linear-gradient(90deg, rgba(37, 99, 235, 0.16), rgba(37, 99, 235, 0.04));
+  animation: stageGlow 1.6s ease-in-out infinite;
+}
+@keyframes stageGlow {
+  0%, 100% { box-shadow: 0 0 6px rgba(37, 99, 235, 0.25); }
+  50% { box-shadow: 0 0 18px rgba(37, 99, 235, 0.6); }
+}
+.stage-icon i {
+  display: inline-block;
+  font-size: 18px;
+  color: var(--accent, #2563eb);
+  animation: stagePulse 0.9s ease-in-out infinite;
+}
+@keyframes stagePulse {
+  0%, 100% { transform: scale(1); opacity: 0.65; }
+  50% { transform: scale(1.3); opacity: 1; }
+}
+.stage-text {
+  display: inline-flex;
+  align-items: flex-end;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, #111);
+}
+.stage-dots {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+}
+.stage-dots i {
+  width: 4px;
+  height: 4px;
+  margin: 0 1px;
+  border-radius: 50%;
+  background: var(--accent, #2563eb);
+  display: inline-block;
+  animation: stageDot 1.1s ease-in-out infinite;
+}
+.stage-dots i:nth-child(2) { animation-delay: 0.18s; }
+.stage-dots i:nth-child(3) { animation-delay: 0.36s; }
+@keyframes stageDot {
+  0%, 100% { transform: scale(0.5); opacity: 0.3; }
+  50% { transform: scale(1.15); opacity: 1; }
+}
+
 .run-button {
   flex-shrink: 0;
   box-sizing: border-box;

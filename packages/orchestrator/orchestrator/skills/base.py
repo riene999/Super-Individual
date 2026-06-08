@@ -90,6 +90,7 @@ async def default_locate(
             "steps": plan.files,
             "references": references,
             "contract": getattr(plan, "contract", ""),
+            "symbolMap": getattr(ctx, "codeSpecSymbolMap", "") or "",
         },
     )
 
@@ -117,9 +118,10 @@ async def run_llm_on_file(
     verify_stdout = str(meta.get("verifyStdout", "")).strip()
     contract = str(meta.get("contract", "")).strip()
     plan_files = str(meta.get("planFiles", "")).strip()
+    symbol_map = str(meta.get("symbolMap", "")).strip()
 
     shared_block = ""
-    if plan_files or contract:
+    if plan_files or contract or symbol_map:
         shared_block = "本次需求会改动以下多个文件，你只负责其中当前这一个，但必须与其它文件保持一致：\n"
         if plan_files:
             shared_block += f"{plan_files}\n"
@@ -128,6 +130,12 @@ async def run_llm_on_file(
                 "\n以下是跨文件必须严格共用的接口约定（组件名/默认导出名/import 路径/接口地址/字段名与枚举取值等），"
                 "务必原样使用，绝对不要自行改名或换路径：\n"
                 f"{contract}\n"
+            )
+        if symbol_map:
+            shared_block += (
+                "\n仓库相关文件的真实导出符号与 import 写法（grounding，务必据此使用正确的模块路径/导出名，"
+                "不要臆造；需要 import 的东西照抄这里的真实写法，注意相对路径相对各文件自身位置）：\n"
+                f"{symbol_map}\n"
             )
         shared_block += "\n----\n\n"
 
@@ -183,6 +191,7 @@ async def default_generate(changes: ChangeSet, llm: LLMClient) -> list[FilePatch
     verify_error = str(changes.meta.get("verifyError", ""))
     verify_stdout = str(changes.meta.get("verifyStdout", ""))
     contract = str(changes.meta.get("contract", ""))
+    symbol_map = str(changes.meta.get("symbolMap", ""))
 
     # 把整张文件清单渲染给每个文件生成调用，让各文件互相“看得见”，避免命名/接口漂移
     normalized_steps = [s if isinstance(s, FileStep) else FileStep(**s) for s in steps]
@@ -207,6 +216,7 @@ async def default_generate(changes: ChangeSet, llm: LLMClient) -> list[FilePatch
                 "verifyStdout": verify_stdout,
                 "contract": contract,
                 "planFiles": plan_files,
+                "symbolMap": symbol_map,
             },
         )
         patches.append(patch)

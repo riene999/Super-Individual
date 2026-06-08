@@ -209,6 +209,29 @@ def relevant_entries(query: str, repo: ConduitRepo, limit: int = MAX_RELEVANT_FI
     return [entry for _, entry in scored[:limit]]
 
 
+def symbol_map_for(repo: ConduitRepo, paths: list[str]) -> str:
+    """为给定文件生成“符号地图”：path + 导出/符号 + 真实 import 写法（来自 code-spec 索引）。
+
+    供生成阶段 grounding：让代码 agent 看到真实的导出名与既有 import 写法，避免臆造模块路径。
+    """
+    spec = spec_store.read_spec(repo.upstream_nwo, repo.repo_path, "current")
+    files = (spec or {}).get("files") or {}
+    lines: list[str] = []
+    for p in paths:
+        entry = files.get(p)
+        if not entry:
+            continue
+        symbols = ", ".join(str(x) for x in (entry.get("symbols") or [])[:12])
+        imports = " ; ".join(str(x) for x in (entry.get("imports") or [])[:8])
+        parts = [f"- {p}"]
+        if symbols:
+            parts.append(f"导出/符号: {symbols}")
+        if imports:
+            parts.append(f"import 写法: {imports}")
+        lines.append("\n  ".join(parts))
+    return "\n".join(lines)
+
+
 def _render_entries(entries: list[dict[str, Any]]) -> str:
     if not entries:
         return "代码规范索引暂未命中相关文件。"

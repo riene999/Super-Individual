@@ -51,6 +51,12 @@ def emit_and_broadcast(run_id: str, event_type: str, payload: dict[str, Any]) ->
     return event
 
 
+def _phase_start(run_id: str, phase: str, label: str) -> RunEvent:
+    """标记阶段开始：设置 run_phase 并发一个 phase.start 事件，与该阶段的 *.done 形成闭环。"""
+    run_phase[run_id] = phase
+    return emit_and_broadcast(run_id, "phase.start", {"phase": phase, "label": label})
+
+
 def _branch_slug(title: str) -> str:
     slug = "".join(c if (c.isascii() and c.isalnum()) else "-" for c in title.strip().lower())
     slug = "-".join(part for part in slug.split("-") if part)
@@ -143,7 +149,7 @@ async def _run_pipeline(run_id: str, raw_text: str, llm, repo, recall_disabled: 
                 pass
 
         # ---- code-spec：建/更新索引，算出相关文件摘要 ----
-        run_phase[run_id] = "code-spec"
+        _phase_start(run_id, "code-spec", "Code spec")
         ctx = repo.get_context()
         code_spec_context = None
         try:
@@ -152,12 +158,13 @@ async def _run_pipeline(run_id: str, raw_text: str, llm, repo, recall_disabled: 
             # code-spec 选择 agent：全量索引交给 LLM 按语义挑相关文件（失败/过大回退关键词）
             code_spec_context, selected_paths = await code_spec.select_relevant_context(raw_text, repo, llm, run_id)
             ctx.codeSpecContext = code_spec_context
+            ctx.codeSpecSymbolMap = code_spec.symbol_map_for(repo, selected_paths)
             emit_and_broadcast(run_id, "spec.selected", {"paths": selected_paths, "count": len(selected_paths)})
         except Exception as e:
             emit_and_broadcast(run_id, "spec.failed", {"message": str(e)})
 
         # ---- plan-loop：规划与澄清合一。plan agent 自评信息是否足够，不够才提问，最多 N 轮，到顶强制出规划 ----
-        run_phase[run_id] = "plan"
+        _phase_start(run_id, "plan", "Plan")
         skills_context = load_skill_docs()
         recall_context = plan_loop.format_recall_context(recall_matches)
         qa_history: list[tuple[str, str]] = []
@@ -217,19 +224,19 @@ async def _run_pipeline(run_id: str, raw_text: str, llm, repo, recall_disabled: 
         )
 
         skill = generic_skill
-        run_phase[run_id] = "locate"
+        _phase_start(run_id, "locate", "Locate")
         changes = await locate.run(skill, final_plan, ctx)
         emit_and_broadcast(run_id, "locate.done", {"attempt": 1, "files": [f.__dict__ for f in changes.files], "fileCount": len(changes.files)})
         patches = await _run_code_and_verify(run_id, skill, changes, llm, repo)
 
-        run_phase[run_id] = "code-spec:update"
+        _phase_start(run_id, "code-spec:update", "Code spec update")
         try:
             spec_update = await code_spec.update_files(repo, llm, [p.path for p in patches], run_id)
             emit_and_broadcast(run_id, "spec.updated", spec_update)
         except Exception as e:
             emit_and_broadcast(run_id, "spec.update_failed", {"message": str(e)})
 
-        run_phase[run_id] = "commit"
+        _phase_start(run_id, "commit", "Commit")
         branch = f"feat/{_branch_slug(plan_title)}-{int(time.time() * 1000)}"
         repo.checkout_branch(branch)
         commit_msg = f"feat: {plan_title}\n\n{raw_text}"
@@ -276,7 +283,7 @@ async def _run_pipeline(run_id: str, raw_text: str, llm, repo, recall_disabled: 
 async def _run_code_and_verify(run_id: str, skill, changes: ChangeSet, llm, repo) -> list:
     attempt = 1
     while True:
-        run_phase[run_id] = f"code:attempt{attempt}"
+        _phase_start(run_id, f"code:attempt{attempt}", "Code" + (f" (attempt {attempt})" if attempt > 1 else ""))
         changes.meta = {**changes.meta, "attempt": attempt}
         patches = await code.run(skill, changes, llm, repo)
         emit_and_broadcast(run_id, "code.done", {"attempt": attempt, "files": [p.path for p in patches]})

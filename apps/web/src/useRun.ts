@@ -8,6 +8,8 @@ export interface RunState {
   runId: string | null;
   events: RunEvent[];
   phase: string;
+  /** 状态条专用：只由 phase.start 驱动的当前阶段，避免用 *.done 抢跑 */
+  stage: string;
   waitingForAnswers: boolean;
   /** ClarifyAgent 给的问题（含 aspect） */
   clarifyQuestions: ClarifyingQ[];
@@ -26,6 +28,7 @@ const initial: RunState = {
   runId: null,
   events: [],
   phase: "idle",
+  stage: "",
   waitingForAnswers: false,
   clarifyQuestions: [],
   recallMatches: [],
@@ -46,7 +49,8 @@ export function useRun() {
       const patch: Partial<RunState> = { events };
 
       if (ev.type === "run.started") {
-        patch.phase = "clarify";
+        patch.phase = "starting";
+        patch.stage = "starting";
         patch.done = false;
         patch.cancelled = false;
         patch.error = null;
@@ -66,6 +70,12 @@ export function useRun() {
         patch.recallMatches = (ev.payload.matches as RecallMatchView[]) ?? [];
         patch.recallSettled = true;
       }
+      if (ev.type === "phase.start") {
+        const raw = String((ev.payload as { phase?: string }).phase ?? "");
+        const norm = raw.startsWith("code:") ? "code" : raw;
+        patch.phase = norm;
+        patch.stage = norm;
+      }
       if (ev.type === "plan.done" || ev.type === "plan.generic") patch.phase = "plan";
       if (ev.type === "spec.ready") patch.phase = "plan";
       if (ev.type === "spec.updated") patch.phase = "commit";
@@ -78,9 +88,10 @@ export function useRun() {
       if (ev.type === "verify.running") patch.phase = "verify";
       if (ev.type === "verify.done")    patch.phase = "commit";
       if (ev.type === "commit.done")    patch.phase = "done";
-      if (ev.type === "run.completed")  { patch.phase = "done"; patch.done = true; }
+      if (ev.type === "run.completed")  { patch.phase = "done"; patch.stage = "done"; patch.done = true; }
       if (ev.type === "run.cancelled")  {
         patch.phase = "cancelled";
+        patch.stage = "cancelled";
         patch.done = true;
         patch.cancelled = true;
         patch.waitingForAnswers = false;
