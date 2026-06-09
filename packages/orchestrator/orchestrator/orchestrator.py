@@ -67,12 +67,12 @@ def _plan_payload_files(files) -> list[dict[str, Any]]:
     return [dataclass_to_json(f) for f in files]
 
 
-async def start_run(raw_text: str, repo_url: str | None = None, recall_disabled: bool = False) -> str:
+async def start_run(raw_text: str, repo_url: str | None = None, recall_disabled: bool = False, skills_disabled: bool = False) -> str:
     run_id = str(uuid4())
     llm = create_doubao_client({"runId": run_id})
     repo = ConduitRepo.from_url(repo_url) if repo_url else create_conduit_repo()
     run_repos[run_id] = repo
-    task = asyncio.create_task(_run_pipeline(run_id, raw_text, llm, repo, recall_disabled))
+    task = asyncio.create_task(_run_pipeline(run_id, raw_text, llm, repo, recall_disabled, skills_disabled))
     run_tasks[run_id] = task
     return run_id
 
@@ -109,7 +109,7 @@ async def _wait_for_answers(run_id: str) -> dict[str, str]:
     return await fut
 
 
-async def _run_pipeline(run_id: str, raw_text: str, llm, repo, recall_disabled: bool = False) -> None:
+async def _run_pipeline(run_id: str, raw_text: str, llm, repo, recall_disabled: bool = False, skills_disabled: bool = False) -> None:
     try:
         emit_and_broadcast(
             run_id,
@@ -117,6 +117,7 @@ async def _run_pipeline(run_id: str, raw_text: str, llm, repo, recall_disabled: 
             {
                 "rawText": raw_text,
                 "recallDisabled": recall_disabled,
+                "skillsDisabled": skills_disabled,
                 "repoPath": str(repo.repo_path),
                 "repoNwo": repo.upstream_nwo,
             },
@@ -165,7 +166,7 @@ async def _run_pipeline(run_id: str, raw_text: str, llm, repo, recall_disabled: 
 
         # ---- plan-loop：规划与澄清合一。plan agent 自评信息是否足够，不够才提问，最多 N 轮，到顶强制出规划 ----
         _phase_start(run_id, "plan", "Plan")
-        skills_context = load_skill_docs()
+        skills_context = "（本次未启用 skill 知识库）" if skills_disabled else load_skill_docs()
         recall_context = plan_loop.format_recall_context(recall_matches)
         qa_history: list[tuple[str, str]] = []
         plan_out = None
@@ -314,7 +315,8 @@ async def replay_from(run_id: str, from_event_index: int, new_raw_text: str) -> 
         repo = ConduitRepo(Path(repo_path), upstream_nwo=repo_nwo) if repo_path else create_conduit_repo()
     run_repos[run_id] = repo
     recall_disabled = bool((started.payload or {}).get("recallDisabled")) if started else False
-    task = asyncio.create_task(_run_pipeline(run_id, new_raw_text, llm, repo, recall_disabled))
+    skills_disabled = bool((started.payload or {}).get("skillsDisabled")) if started else False
+    task = asyncio.create_task(_run_pipeline(run_id, new_raw_text, llm, repo, recall_disabled, skills_disabled))
     run_tasks[run_id] = task
 
 

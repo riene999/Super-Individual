@@ -10,6 +10,8 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from orchestrator.agents import code_spec
+from orchestrator.skills import library_loader
+from orchestrator.skills.library_loader import SkillError
 from orchestrator.events import store as event_store
 from orchestrator.llm.doubao import create_doubao_client
 from orchestrator.metrics.aggregator import aggregate_global, aggregate_run, compare_runs
@@ -42,6 +44,7 @@ class RunCreate(BaseModel):
     text: str
     repoUrl: str | None = None
     recallDisabled: bool = False
+    skillsDisabled: bool = False
 
 
 class RepoSetup(BaseModel):
@@ -50,6 +53,16 @@ class RepoSetup(BaseModel):
 
 class DismissRecall(BaseModel):
     historicalRunId: str
+
+
+class SkillCreate(BaseModel):
+    name: str
+    content: str = ""
+
+
+class SkillUpdate(BaseModel):
+    content: str = ""
+    newName: str | None = None
 
 
 class Intervention(BaseModel):
@@ -113,6 +126,36 @@ async def rebuild_spec(body: RepoSetup):
         raise HTTPException(status_code=400, detail=err(str(e)))
 
 
+@app.get("/api/skills")
+async def list_skills():
+    return {"skills": library_loader.list_skills()}
+
+
+@app.post("/api/skills")
+async def create_skill(body: SkillCreate):
+    try:
+        return library_loader.create_skill(body.name, body.content)
+    except SkillError as e:
+        raise HTTPException(status_code=400, detail=err(str(e)))
+
+
+@app.put("/api/skills/{name}")
+async def update_skill(name: str, body: SkillUpdate):
+    try:
+        return library_loader.update_skill(name, body.content, body.newName)
+    except SkillError as e:
+        raise HTTPException(status_code=400, detail=err(str(e)))
+
+
+@app.delete("/api/skills/{name}")
+async def delete_skill(name: str):
+    try:
+        library_loader.delete_skill(name)
+        return {"ok": True}
+    except SkillError as e:
+        raise HTTPException(status_code=400, detail=err(str(e)))
+
+
 @app.get("/api/health")
 async def health():
     return {"ok": True}
@@ -123,7 +166,7 @@ async def runs(body: RunCreate):
     text = body.text.strip()
     if not text:
         raise HTTPException(status_code=400, detail=err("text is required"))
-    run_id = await start_run(text, body.repoUrl, body.recallDisabled)
+    run_id = await start_run(text, body.repoUrl, body.recallDisabled, body.skillsDisabled)
     return {"runId": run_id}
 
 

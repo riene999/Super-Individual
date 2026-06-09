@@ -122,14 +122,14 @@ export function useRun() {
     };
   }, [appendEvent]);
 
-  const startRun = useCallback(async (text: string, repoUrl?: string, recallDisabled?: boolean) => {
+  const startRun = useCallback(async (text: string, repoUrl?: string, recallDisabled?: boolean, skillsDisabled?: boolean) => {
     esRef.current?.close();
     setState({ ...initial, phase: "starting", dismissedRunIds: new Set() });
 
     const res = await fetch(`${API}/runs`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, ...(repoUrl ? { repoUrl } : {}), recallDisabled: !!recallDisabled }),
+      body: JSON.stringify({ text, ...(repoUrl ? { repoUrl } : {}), recallDisabled: !!recallDisabled, skillsDisabled: !!skillsDisabled }),
     });
     const { runId } = await res.json() as { runId: string };
 

@@ -10,6 +10,7 @@ import MetricsPanel from "./MetricsPanel.js";
 import RecallCard from "./RecallCard.js";
 import RepoPanel from "./RepoPanel.js";
 import RunHistoryPanel from "./RunHistoryPanel.js";
+import SettingsModal from "./SettingsModal.js";
 import { computePrefill } from "./recallTypes.js";
 import type { PrefillState } from "./recallTypes.js";
 import { useRecentRuns } from "./useRecentRuns.js";
@@ -30,6 +31,8 @@ export default function App() {
   const [metricsSignal, setMetricsSignal] = useState(0);
   const [activityTab, setActivityTab] = useState<"events" | "history">("events");
   const [recallEnabled, setRecallEnabled] = useState(true);
+  const [skillsEnabled, setSkillsEnabled] = useState(true);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const { data: runMetrics } = useRunMetrics(state.runId, metricsSignal);
   const { data: globalMetrics, loading: globalLoading, refresh: refreshGlobalMetrics } = useGlobalMetrics(metricsSignal);
@@ -58,13 +61,13 @@ export default function App() {
     }
     if (!text.trim() || !repoReady) return;
     setRunning(true);
-    await startRun(text.trim(), repoState.repoUrl, !recallEnabled);
+    await startRun(text.trim(), repoState.repoUrl, !recallEnabled, !skillsEnabled);
   };
 
   const handleStartNewRun = async () => {
     if (!text.trim() || !repoReady || running) return;
     setRunning(true);
-    await startRun(text.trim(), repoState.repoUrl, !recallEnabled);
+    await startRun(text.trim(), repoState.repoUrl, !recallEnabled, !skillsEnabled);
   };
 
   const handleResetRepo = async (repoUrl: string) => {
@@ -127,6 +130,9 @@ export default function App() {
           <div className="brand">
             <div className="brand-icon"><i className="ti ti-sparkles" aria-hidden="true" /></div>
             <div className="brand-title">Super Individual</div>
+            <button className="settings-gear" onClick={() => setSettingsOpen(true)} title="设置" aria-label="设置">
+              <i className="ti ti-settings-filled" aria-hidden="true" />
+            </button>
           </div>
           <div className="brand-subtitle">PM 自然语言 → Conduit 代码变更</div>
         </div>
@@ -158,6 +164,15 @@ export default function App() {
                   title="开/关历史召回：是否检索相似历史需求作为规划参考"
                 >
                   <i className="ti ti-history" aria-hidden="true" />历史召回 {recallEnabled ? "启用" : "停用"}
+                </button>
+                <button
+                  type="button"
+                  className={`toggle-chip ${skillsEnabled ? "on" : "off"}`}
+                  onClick={() => setSkillsEnabled((v) => !v)}
+                  aria-pressed={skillsEnabled}
+                  title="开/关 skill 知识库：是否把领域方法论指引注入规划"
+                >
+                  <i className="ti ti-book" aria-hidden="true" />skill {skillsEnabled ? "启用" : "停用"}
                 </button>
               </div>
               <div className="run-actions">
@@ -275,6 +290,8 @@ export default function App() {
           />
         </aside>
       </main>
+
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   );
 }
