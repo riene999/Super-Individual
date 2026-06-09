@@ -114,7 +114,14 @@ PM 原始需求：
 规划要求：
 - path 相对仓库根目录；mode=modify 的文件须真实存在，mode=create 的须放在符合现有约定的位置。
 - **功能要从头管到尾，一个都不能漏**：后端加 controller 必须配路由注册；前端加页面/Tab 必须配路由表和导航入口；加持久化字段必须配 migration。
-- contract 把跨文件必须一致的名字钉死（组件名/默认导出名/import 路径/API 路径/字段名与枚举值/函数名等），并照抄既有事实（数据库表名严格按仓库概览里的大小写与单复数，如 Articles）。每个文件的 instruction 必须与 contract 完全一致，不得自行改名。
+- contract 把跨文件必须一致的契约钉死，所有文件严格共用、不得自行改名或改签名，至少包含：
+  · 组件名 / 默认导出名 / import 路径 / 前端路由 path；
+  · 函数与服务的**完整签名**（函数名 + 参数顺序与含义，例如 toggleCommentLike(slug, commentId, isLiked)），调用方必须严格按此签名传参，不得少传或错位；
+  · 新组件的 **props**（名称，例如 CommentLikeButton 接收 props: comment、slug），渲染处必须把这些 props 传齐；
+  · 后端 API 路径与 HTTP 方法、字段名与枚举取值；
+  · Sequelize 模型要同时钉 **modelName（注册名）和 tableName（表名）**，且任何关联（belongsTo/hasMany/belongsToMany 的 through、以及 associate 解构的 models 名）引用的模型名必须与 modelName 完全一致（注意单复数，CommentLike ≠ CommentLikes）；
+  · 既有事实从仓库概览照抄（数据库表名大小写/单复数，如 Articles；要复用的现有导出名、路由前缀）。
+  每个文件的 instruction 必须显式引用 contract 里的名字与签名，与之完全一致。
 - instruction 要写清本文件具体改什么，并显式引用 contract 中的名字。
 - 文件数按实际需要，不要为凑数硬塞，也不要为省事漏掉配套文件；上限 12 个。
 """

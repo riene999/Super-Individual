@@ -45,6 +45,13 @@ function fmtMs(v: unknown): string {
 }
 
 function fmtPayload(type: string, payload: Record<string, unknown>): string {
+  if (type === "run.started") {
+    const lines = [`需求：${payload.rawText ?? ""}`];
+    if (payload.repoNwo) lines.push(`仓库：${payload.repoNwo}`);
+    if (payload.repoPath) lines.push(`路径：${payload.repoPath}`);
+    lines.push(`历史召回：${payload.recallDisabled ? "已关闭" : "已开启"}`);
+    return lines.join("\n");
+  }
   if (type === "clarify.questions") {
     const raw = (payload.questions as Array<string | { q: string }>) ?? [];
     const qs = raw.map((item) => (typeof item === "string" ? item : item.q));
@@ -142,7 +149,10 @@ function fmtPayload(type: string, payload: Record<string, unknown>): string {
     const attTag = att > 1 ? ` #${att}` : "";
     return `${payload.agent}${attTag} · ${payload.promptTokens}+${payload.completionTokens} tok · ${fmtMs(payload.latencyMs)} · ${fmtCost(payload.costCNY)}`;
   }
-  return Object.keys(payload).length ? JSON.stringify(payload, null, 2) : "";
+  if (!Object.keys(payload).length) return "";
+  return Object.entries(payload)
+    .map(([k, v]) => `${k}: ${v !== null && typeof v === "object" ? JSON.stringify(v) : String(v)}`)
+    .join("\n");
 }
 
 function eventMeta(type: string, event: RunEvent): string {

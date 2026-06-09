@@ -45,8 +45,8 @@ class Skill:
     async def locate(self, plan: SkillPlan, ctx: RepoContext) -> ChangeSet:
         return await default_locate(plan, ctx, self.reference_for)
 
-    async def generate(self, changes: ChangeSet, llm: LLMClient) -> list[FilePatch]:
-        return await default_generate(changes, llm)
+    async def generate(self, changes: ChangeSet, llm: LLMClient, repo: "ConduitRepo | None" = None) -> list[FilePatch]:
+        return await default_generate(changes, llm, repo)
 
 
 def keyword_match(req: ClarifiedRequest, words: list[str], threshold: int, required_words: list[str] | None = None) -> float:
@@ -104,6 +104,31 @@ def _strip_code_fence(text: str) -> str:
     return stripped.strip()
 
 
+def _build_shared_block(meta: dict[str, int | str]) -> str:
+    """跨文件共享上下文：文件清单 + 接口契约 + 选中文件的符号地图。"""
+    contract = str(meta.get("contract", "")).strip()
+    plan_files = str(meta.get("planFiles", "")).strip()
+    symbol_map = str(meta.get("symbolMap", "")).strip()
+    if not (plan_files or contract or symbol_map):
+        return ""
+    block = "本次需求会改动以下多个文件，你只负责其中当前这一个，但必须与其它文件保持一致：\n"
+    if plan_files:
+        block += f"{plan_files}\n"
+    if contract:
+        block += (
+            "\n以下是跨文件必须严格共用的接口约定（组件名/默认导出名/import 路径/接口地址/字段名与枚举取值等），"
+            "务必原样使用，绝对不要自行改名或换路径：\n"
+            f"{contract}\n"
+        )
+    if symbol_map:
+        block += (
+            "\n仓库相关文件的真实导出符号与 import 写法（grounding，务必据此使用正确的模块路径/导出名，"
+            "不要臆造；需要 import 的东西照抄这里的真实写法，注意相对路径相对各文件自身位置）：\n"
+            f"{symbol_map}\n"
+        )
+    return block + "\n----\n\n"
+
+
 async def run_llm_on_file(
     llm: LLMClient,
     path: str,
@@ -116,28 +141,7 @@ async def run_llm_on_file(
     attempt = int(meta.get("attempt", 1))
     verify_error = str(meta.get("verifyError", "")).strip()
     verify_stdout = str(meta.get("verifyStdout", "")).strip()
-    contract = str(meta.get("contract", "")).strip()
-    plan_files = str(meta.get("planFiles", "")).strip()
-    symbol_map = str(meta.get("symbolMap", "")).strip()
-
-    shared_block = ""
-    if plan_files or contract or symbol_map:
-        shared_block = "本次需求会改动以下多个文件，你只负责其中当前这一个，但必须与其它文件保持一致：\n"
-        if plan_files:
-            shared_block += f"{plan_files}\n"
-        if contract:
-            shared_block += (
-                "\n以下是跨文件必须严格共用的接口约定（组件名/默认导出名/import 路径/接口地址/字段名与枚举取值等），"
-                "务必原样使用，绝对不要自行改名或换路径：\n"
-                f"{contract}\n"
-            )
-        if symbol_map:
-            shared_block += (
-                "\n仓库相关文件的真实导出符号与 import 写法（grounding，务必据此使用正确的模块路径/导出名，"
-                "不要臆造；需要 import 的东西照抄这里的真实写法，注意相对路径相对各文件自身位置）：\n"
-                f"{symbol_map}\n"
-            )
-        shared_block += "\n----\n\n"
+    shared_block = _build_shared_block(meta)
 
     if mode == "modify":
         body = f"""文件路径：{path}
@@ -183,7 +187,164 @@ async def run_llm_on_file(
     return FilePatch(path=path, newContent=_strip_code_fence(result["text"]))
 
 
-async def default_generate(changes: ChangeSet, llm: LLMClient) -> list[FilePatch]:
+TOOL_MAX_STEPS = 3
+_GREP_MAX = 30
+_READ_MAX_LINES = 200
+_READ_MAX_CHARS = 6000
+_LIST_MAX = 100
+
+_TOOL_NAMES = {"grep", "read_file", "list_files"}
+
+_TOOL_PROTOCOL = """
+你可以先用只读工具查证仓库的真实写法。需要查时，**本轮只输出一个 JSON**（不要加解释或 markdown），三选一：
+{"action":"grep","pattern":"正则或子串","glob":"可选，如 backend/**/*.js"}
+{"action":"read_file","path":"相对路径","start":1,"end":120}
+{"action":"list_files","glob":"如 backend/middleware/*.js"}
+
+写新文件前务必先确认：要 import 的模块真实路径与导出名、要复用的 hook/context 的真实返回字段、同类既有文件的写法、既有模型的注册名。不要臆造。
+
+查清楚后（或不需要查时），**直接输出该文件的完整内容本身**——纯代码，不要再输出 JSON、不要解释、不要用 markdown 代码块包裹。
+"""
+
+
+def _tool_grep(repo: "ConduitRepo", args: dict) -> str:
+    pattern = str(args.get("pattern", "")).strip()
+    glob = str(args.get("glob") or "**/*")
+    if not pattern:
+        return "grep 需要 pattern"
+    try:
+        matches = repo.grep(pattern, glob)
+    except Exception as e:
+        return f"grep 出错：{e}"
+    if not matches:
+        return "无匹配"
+    out = [f"{m.path}:{m.line}: {m.content}"[:200] for m in matches[:_GREP_MAX]]
+    if len(matches) > _GREP_MAX:
+        out.append(f"…(共 {len(matches)} 条，已截断)")
+    return "\n".join(out)
+
+
+def _tool_read(repo: "ConduitRepo", args: dict) -> str:
+    path = str(args.get("path", "")).strip()
+    if not path:
+        return "read_file 需要 path"
+    content = repo.read_file_or_none(path)
+    if content is None:
+        return f"文件不存在：{path}"
+    lines = content.splitlines()
+    start = max(1, int(args.get("start") or 1))
+    end = int(args.get("end") or (start + _READ_MAX_LINES - 1))
+    end = min(end, len(lines), start + _READ_MAX_LINES - 1)
+    sel = lines[start - 1:end]
+    body = "\n".join(f"{start + i}: {ln}" for i, ln in enumerate(sel))
+    return body[:_READ_MAX_CHARS] or "(空文件)"
+
+
+def _tool_list(repo: "ConduitRepo", args: dict) -> str:
+    glob = str(args.get("glob", "")).strip()
+    if not glob:
+        return "list_files 需要 glob"
+    files = repo.list_files(glob)[:_LIST_MAX]
+    return "\n".join(files) or "无匹配文件"
+
+
+def _run_tool_cached(repo: "ConduitRepo", act: dict, cache: dict[str, str]) -> str:
+    key = json.dumps(act, sort_keys=True, ensure_ascii=False)
+    if key in cache:
+        return cache[key]
+    action = str(act.get("action", ""))
+    if action == "grep":
+        obs = _tool_grep(repo, act)
+    elif action == "read_file":
+        obs = _tool_read(repo, act)
+    elif action == "list_files":
+        obs = _tool_list(repo, act)
+    else:
+        obs = f"未知工具：{action}（可用：grep/read_file/list_files/write_file）"
+    cache[key] = obs
+    return obs
+
+
+def _parse_action(text: str) -> dict | None:
+    s = text.strip()
+    if s.startswith("```"):
+        s = s.split("\n", 1)[1] if "\n" in s else s
+        if s.endswith("```"):
+            s = s[:-3]
+    s = s.strip()
+    try:
+        data = json.loads(s)
+    except Exception:
+        start = s.find("{")
+        end = s.rfind("}")
+        if start < 0 or end <= start:
+            return None
+        try:
+            data = json.loads(s[start:end + 1])
+        except Exception:
+            return None
+    return data if isinstance(data, dict) else None
+
+
+async def run_llm_on_file_with_tools(
+    llm: LLMClient,
+    repo: "ConduitRepo",
+    path: str,
+    current_content: str,
+    instruction: str,
+    reference: dict[str, str] | None,
+    meta: dict[str, int | str],
+    cache: dict[str, str],
+) -> FilePatch:
+    """带只读工具的有界生成循环：模型按需 grep/read_file/list_files 查证，查清后直接输出文件原文。"""
+    attempt = int(meta.get("attempt", 1))
+    verify_error = str(meta.get("verifyError", "")).strip()
+    verify_stdout = str(meta.get("verifyStdout", "")).strip()
+    shared_block = _build_shared_block(meta)
+
+    ref_block = f"\n参考样例文件（{reference['path']}）：\n{reference['content']}\n" if reference else ""
+    prev_block = ""
+    if (verify_error or verify_stdout) and current_content.strip():
+        prev_block = f"\n上一次生成的内容（验证未通过，在此基础上修复）：\n{current_content}\n"
+    error_block = ""
+    if verify_error or verify_stdout:
+        error_block = (
+            f"\n\n上一次验证未通过（第 {attempt} 次尝试），请针对性修复：\n"
+            f"[stderr]\n{verify_error or '(空)'}\n[stdout]\n{verify_stdout or '(空)'}"
+        )
+
+    task = f"""你要新建文件：{path}
+{ref_block}创建任务：
+{instruction}
+{prev_block}{error_block}"""
+
+    messages = [
+        {
+            "role": "system",
+            "content": "你是专业代码助手。可用只读工具查证仓库的真实写法，避免臆造模块路径/导出名。保持项目风格，不引入未声明依赖。",
+        },
+        {"role": "user", "content": f"{shared_block}{task}\n{_TOOL_PROTOCOL}"},
+    ]
+
+    for _ in range(TOOL_MAX_STEPS):
+        result = await llm.chat(messages, {"temperature": 0.1, "maxTokens": 4096}, {"agent": meta["agent"], "attempt": attempt})
+        text = result["text"]
+        act = _parse_action(text)
+        # 只有"明确是工具调用的小 JSON"才当工具；其余一律视为最终文件原文（绝不把模型输出再当 JSON 解出代码）
+        if act is not None and str(act.get("action", "")) in _TOOL_NAMES:
+            obs = _run_tool_cached(repo, act, cache)
+            messages.append({"role": "assistant", "content": text})
+            messages.append({"role": "user", "content": f"工具结果：\n{obs}"})
+            continue
+        return FilePatch(path=path, newContent=_strip_code_fence(text))
+
+    # 步数用尽：让它别再查，直接交文件原文
+    messages.append({"role": "user", "content": "不要再调用工具，现在直接输出该文件的完整内容本身（纯代码，不要 JSON、不要解释）。"})
+    result = await llm.chat(messages, {"temperature": 0.1, "maxTokens": 4096}, {"agent": meta["agent"], "attempt": attempt})
+    return FilePatch(path=path, newContent=_strip_code_fence(result["text"]))
+
+
+async def default_generate(changes: ChangeSet, llm: LLMClient, repo: "ConduitRepo | None" = None) -> list[FilePatch]:
     steps = changes.meta.get("steps", [])
     refs = changes.meta.get("references", {})
     skill_name = str(changes.meta.get("skillName", "unknown"))
@@ -198,26 +359,30 @@ async def default_generate(changes: ChangeSet, llm: LLMClient) -> list[FilePatch
     plan_files = "\n".join(f"- [{s.mode}] {s.path}：{s.instruction}" for s in normalized_steps)
 
     patches: list[FilePatch] = []
+    tool_cache: dict[str, str] = {}  # 同一次生成内复用工具结果（如同一个 import 路径只查一次）
     for idx, fc in enumerate(changes.files):
         if idx >= len(normalized_steps):
             continue
         step = normalized_steps[idx]
-        patch = await run_llm_on_file(
-            llm,
-            fc.path,
-            changes.context.get(fc.path, ""),
-            step.mode,
-            step.instruction,
-            refs.get(fc.path),
-            {
-                "agent": f"code:{skill_name}",
-                "attempt": attempt,
-                "verifyError": verify_error,
-                "verifyStdout": verify_stdout,
-                "contract": contract,
-                "planFiles": plan_files,
-                "symbolMap": symbol_map,
-            },
-        )
+        file_meta = {
+            "agent": f"code:{skill_name}",
+            "attempt": attempt,
+            "verifyError": verify_error,
+            "verifyStdout": verify_stdout,
+            "contract": contract,
+            "planFiles": plan_files,
+            "symbolMap": symbol_map,
+        }
+        # 新建文件最需要 grounding：给它装只读工具，按需查证真实写法后再生成
+        if repo is not None and step.mode == "create":
+            patch = await run_llm_on_file_with_tools(
+                llm, repo, fc.path, changes.context.get(fc.path, ""),
+                step.instruction, refs.get(fc.path), file_meta, tool_cache,
+            )
+        else:
+            patch = await run_llm_on_file(
+                llm, fc.path, changes.context.get(fc.path, ""),
+                step.mode, step.instruction, refs.get(fc.path), file_meta,
+            )
         patches.append(patch)
     return patches
