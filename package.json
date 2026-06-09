@@ -4,18 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "pnpm --parallel -r dev",
+    "dev:py-api": "cd apps/api_py && uv run uvicorn app.main:app --host 0.0.0.0 --port 3001 --reload",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
-    "test:skills": "pnpm --filter @super-individual/orchestrator exec tsx ../../e2e/test-skills-deterministic.ts",
-    "test:weak-coupling": "pnpm --filter @super-individual/orchestrator exec tsx ../../e2e/test-weak-coupling.ts",
-    "test:memory-discrimination": "pnpm --filter @super-individual/orchestrator exec tsx ../../e2e/test-memory-discrimination.ts",
-    "test:memory-recall": "pnpm --filter @super-individual/orchestrator exec tsx ../../e2e/test-memory-recall.ts",
-    "test:recall-integration": "pnpm --filter @super-individual/orchestrator exec tsx ../../e2e/test-recall-integration.ts",
-    "test:aspect-matching": "pnpm --filter @super-individual/orchestrator exec tsx ../../e2e/test-aspect-matching.ts",
-    "test:recall-prefill": "pnpm --filter @super-individual/orchestrator exec tsx ../../e2e/test-recall-prefill.ts",
-    "test:aspect-template": "pnpm --filter @super-individual/orchestrator exec tsx ../../e2e/test-aspect-template.ts",
-    "test:aspect-scan": "pnpm --filter @super-individual/orchestrator exec tsx ../../e2e/test-aspect-scan.ts",
-    "test:all": "pnpm test:skills && pnpm test:weak-coupling && pnpm test:memory-discrimination && pnpm test:memory-recall && pnpm test:recall-integration && pnpm test:aspect-matching && pnpm test:recall-prefill && pnpm test:aspect-template && pnpm test:aspect-scan"
+    "test:recall-prefill": "pnpm --filter @super-individual/e2e exec tsx test-recall-prefill.ts",
+    "test:all": "pnpm test:recall-prefill"
   },
   "devDependencies": {
     "typescript": "^5.5.4"

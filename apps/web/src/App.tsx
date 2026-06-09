@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRun } from "./useRun.js";
+import { useRepo } from "./useRepo.js";
 import { useGlobalMetrics, useRunMetrics } from "./useMetrics.js";
 import EventCard from "./EventCard.js";
 import ClarifyBox from "./ClarifyBox.js";
@@ -7,8 +8,13 @@ import ReplayBar from "./ReplayBar.js";
 import RunMetricsCard from "./RunMetricsCard.js";
 import MetricsPanel from "./MetricsPanel.js";
 import RecallCard from "./RecallCard.js";
+import RepoPanel from "./RepoPanel.js";
+import RunHistoryPanel from "./RunHistoryPanel.js";
+import SettingsModal from "./SettingsModal.js";
 import { computePrefill } from "./recallTypes.js";
 import type { PrefillState } from "./recallTypes.js";
+import { useRecentRuns } from "./useRecentRuns.js";
+import type { RecentRun } from "./useRecentRuns.js";
 
 const DEMO_PROMPT = "我想在每篇文章卡片上看到大概要读几分钟";
 
@@ -18,13 +24,19 @@ function fmtCost(v: number): string {
 
 export default function App() {
   const [text, setText] = useState(DEMO_PROMPT);
-  const { state, startRun, submitAnswers, replayFrom, dismissRecall } = useRun();
+  const { state, startRun, stopRun, resumeRun, submitAnswers, replayFrom, replayRunFrom, dismissRecall } = useRun();
+  const { state: repoState, setRepoUrl, cloneRepo, resetRepo, rebuildSpec } = useRepo();
   const feedRef = useRef<HTMLDivElement>(null);
   const [running, setRunning] = useState(false);
   const [metricsSignal, setMetricsSignal] = useState(0);
+  const [activityTab, setActivityTab] = useState<"events" | "history">("events");
+  const [recallEnabled, setRecallEnabled] = useState(true);
+  const [skillsEnabled, setSkillsEnabled] = useState(true);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const { data: runMetrics } = useRunMetrics(state.runId, metricsSignal);
   const { data: globalMetrics, loading: globalLoading, refresh: refreshGlobalMetrics } = useGlobalMetrics(metricsSignal);
+  const { runs: recentRuns, loading: recentRunsLoading, deleteRunHistory } = useRecentRuns(metricsSignal, 20);
 
   useEffect(() => {
     feedRef.current?.scrollTo({ top: feedRef.current.scrollHeight, behavior: "smooth" });
@@ -34,10 +46,49 @@ export default function App() {
     setMetricsSignal((s) => s + 1);
   }, [state.events.length, state.done]);
 
-  const handleStart = async () => {
-    if (!text.trim() || running) return;
+  const repoReady = repoState.status === "ready";
+
+  const handleRunButton = async () => {
+    if (running) {
+      if (state.phase === "stopping") return;
+      await stopRun();
+      return;
+    }
+    if (state.cancelled) {
+      setRunning(true);
+      await resumeRun();
+      return;
+    }
+    if (!text.trim() || !repoReady) return;
     setRunning(true);
-    await startRun(text.trim());
+    await startRun(text.trim(), repoState.repoUrl, !recallEnabled, !skillsEnabled);
+  };
+
+  const handleStartNewRun = async () => {
+    if (!text.trim() || !repoReady || running) return;
+    setRunning(true);
+    await startRun(text.trim(), repoState.repoUrl, !recallEnabled, !skillsEnabled);
+  };
+
+  const handleResetRepo = async (repoUrl: string) => {
+    const ok = window.confirm("初始化会丢弃该仓库的本地代码改动，并恢复到原始远端默认分支。确认继续？");
+    if (!ok) return;
+    await resetRepo(repoUrl);
+  };
+
+  const handleDeleteRunHistory = async (run: RecentRun) => {
+    const message = run.status === "running"
+      ? "这条 run 仍在运行。强制删除会先停止它，再删除历史；不会删除 memory，也不会回滚代码改动。"
+      : "删除这条 run 历史？这不会删除 memory，也不会回滚代码改动。";
+    const ok = window.confirm(message);
+    if (!ok) return;
+    await deleteRunHistory(run.runId);
+  };
+
+  const handleReplayHistoryRun = async (run: RecentRun, fromIndex: number, newText: string) => {
+    setActivityTab("events");
+    setRunning(true);
+    await replayRunFrom(run.runId, fromIndex, newText || run.rawText);
   };
 
   useEffect(() => {
@@ -56,8 +107,17 @@ export default function App() {
   const phaseLabel: Record<string, string> = {
     idle: "", starting: "启动中…", clarify: "等待澄清…",
     plan: "规划中…", locate: "定位文件…", code: "生成代码…",
-    verify: "验证中…", commit: "提交中…", done: "完成", replaying: "重放中…",
+    verify: "验证中…", commit: "提交中…", pr: "提交 PR…", done: "完成", stopping: "停止中…", cancelled: "已停止", replaying: "重放中…",
   };
+
+  // 状态条用：通俗易懂的中文阶段名（不带“…”，省略号由动画补）
+  const stageWord: Record<string, string> = {
+    starting: "启动", recall: "查历史", "code-spec": "读代码规范", plan: "规划",
+    clarify: "等你回答", locate: "找要改的文件", code: "写代码", verify: "验证代码",
+    "code-spec:update": "更新代码规范", commit: "提交代码", pr: "提交 PR", replaying: "重放",
+  };
+  const stageActive = running && !state.done && !state.error;
+  const stageWordText = state.waitingForAnswers ? "等你回答" : (stageWord[state.stage] ?? "处理");
 
   const summary = globalMetrics
     ? `${globalMetrics.totalRuns} runs · ${globalMetrics.overall.count} calls · ${fmtCost(globalMetrics.overall.totalCostCNY)}`
@@ -70,6 +130,9 @@ export default function App() {
           <div className="brand">
             <div className="brand-icon"><i className="ti ti-sparkles" aria-hidden="true" /></div>
             <div className="brand-title">Super Individual</div>
+            <button className="settings-gear" onClick={() => setSettingsOpen(true)} title="设置" aria-label="设置">
+              <i className="ti ti-settings-filled" aria-hidden="true" />
+            </button>
           </div>
           <div className="brand-subtitle">PM 自然语言 → Conduit 代码变更</div>
         </div>
@@ -81,6 +144,7 @@ export default function App() {
 
       <main className="layout">
         <section className="main-col">
+          <RepoPanel state={repoState} onUrlChange={setRepoUrl} onClone={cloneRepo} onReset={handleResetRepo} onRebuildSpec={rebuildSpec} resetDisabled={running} />
           <div className="input-card">
             <textarea
               className="input-text"
@@ -88,19 +152,62 @@ export default function App() {
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder="描述你的需求…"
-              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleStart(); } }}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleRunButton(); } }}
             />
             <div className="input-footer">
               <div className="input-toggles">
-                <span><i className="ti ti-history" aria-hidden="true" />历史召回 启用</span>
-                <span><i className="ti ti-search" aria-hidden="true" />aspect 扫描 启用</span>
+                <button
+                  type="button"
+                  className={`toggle-chip ${recallEnabled ? "on" : "off"}`}
+                  onClick={() => setRecallEnabled((v) => !v)}
+                  aria-pressed={recallEnabled}
+                  title="开/关历史召回：是否检索相似历史需求作为规划参考"
+                >
+                  <i className="ti ti-history" aria-hidden="true" />历史召回 {recallEnabled ? "启用" : "停用"}
+                </button>
+                <button
+                  type="button"
+                  className={`toggle-chip ${skillsEnabled ? "on" : "off"}`}
+                  onClick={() => setSkillsEnabled((v) => !v)}
+                  aria-pressed={skillsEnabled}
+                  title="开/关 skill 知识库：是否把领域方法论指引注入规划"
+                >
+                  <i className="ti ti-book" aria-hidden="true" />skill {skillsEnabled ? "启用" : "停用"}
+                </button>
               </div>
-              <button className="run-button" onClick={handleStart} disabled={running || !text.trim()}>
-                {running ? (phaseLabel[state.phase] ?? "运行中…") : "运行"}
-                <i className="ti ti-arrow-right" aria-hidden="true" />
+              <div className="run-actions">
+              <button
+                className={`run-button ${running ? "stop" : state.cancelled ? "resume" : "play"}`}
+                onClick={handleRunButton}
+                disabled={(running && state.phase === "stopping") || (!running && !state.cancelled && (!text.trim() || !repoReady))}
+                title={!repoReady && !running && !state.cancelled ? "请先 Clone 目标仓库" : running ? "停止" : state.cancelled ? "继续" : "运行"}
+                aria-label={running ? "停止" : state.cancelled ? "继续" : "运行"}
+              >
+                {running ? "停止" : state.cancelled ? "继续" : null}
+                <i className={`ti ${running ? "ti-player-stop" : state.cancelled ? "ti-rewind" : "ti-player-play"}`} aria-hidden="true" />
               </button>
+              {state.cancelled && !running && (
+                <button
+                  className="run-button play restart"
+                  onClick={handleStartNewRun}
+                  disabled={!text.trim() || !repoReady}
+                  title="重新开始"
+                  aria-label="重新开始"
+                >
+                  <i className="ti ti-player-play" aria-hidden="true" />
+                </button>
+              )}
+              </div>
             </div>
           </div>
+
+          <ReplayBar
+            events={state.events}
+            onReplay={(idx, newText) => {
+              setRunning(true);
+              replayFrom(idx, newText || text);
+            }}
+          />
 
           {state.recallMatches.length > 0 && (
             <RecallCard
@@ -118,35 +225,56 @@ export default function App() {
             />
           )}
 
-          <div className="event-stream" ref={feedRef}>
-            {state.events
-              .filter((ev) => ev.type !== "recall.matched")
-              .map((ev, i) => (
-                <EventCard key={`${ev.ts}-${i}`} event={ev} index={i} />
-              ))}
-            {state.error && (
-              <div className="event event-error">
-                <div className="event-icon danger"><i className="ti ti-circle-x" aria-hidden="true" /></div>
-                <div className="event-body">
-                  <div className="event-head">
-                    <span className="event-title">Run error</span>
-                    <span className="event-meta">SSE</span>
+          <div className="activity-panel">
+            <div className="activity-tabs">
+              <button className={activityTab === "events" ? "active" : ""} onClick={() => setActivityTab("events")}>事件流</button>
+              <button className={activityTab === "history" ? "active" : ""} onClick={() => setActivityTab("history")}>对话历史</button>
+            </div>
+
+            {activityTab === "events" ? (
+              <>
+                {stageActive && (
+                  <div className="stage-bar">
+                    <span className="stage-icon"><i className="ti ti-activity" aria-hidden="true" /></span>
+                    <span className="stage-text">
+                      {stageWordText}中
+                      <span className="stage-dots"><i /><i /><i /></span>
+                    </span>
                   </div>
-                  <pre className="event-desc">{state.error}</pre>
+                )}
+                <div className="event-stream" ref={feedRef}>
+                {!stageActive && state.events.filter((ev) => ev.type !== "recall.matched").length === 0 && !state.error && (
+                  <div className="activity-empty">运行阶段信息会显示在这里</div>
+                )}
+                {state.events
+                  .filter((ev) => ev.type !== "recall.matched")
+                  .map((ev, i) => (
+                    <EventCard key={`${ev.ts}-${i}`} event={ev} index={i} />
+                  ))}
+                {state.error && (
+                  <div className="event event-error">
+                    <div className="event-icon danger"><i className="ti ti-circle-x" aria-hidden="true" /></div>
+                    <div className="event-body">
+                      <div className="event-head">
+                        <span className="event-title">Run error</span>
+                        <span className="event-meta">SSE</span>
+                      </div>
+                      <pre className="event-desc">{state.error}</pre>
+                    </div>
+                  </div>
+                )}
                 </div>
-              </div>
+              </>
+            ) : (
+              <RunHistoryPanel
+                runs={recentRuns}
+                loading={recentRunsLoading}
+                onDelete={handleDeleteRunHistory}
+                onReplay={handleReplayHistoryRun}
+              />
             )}
           </div>
 
-          {(state.done || state.error) && state.events.length > 0 && (
-            <ReplayBar
-              events={state.events}
-              onReplay={(idx, newText) => {
-                setRunning(true);
-                replayFrom(idx, newText || text);
-              }}
-            />
-          )}
         </section>
 
         <aside className="sidebar-col">
@@ -162,6 +290,8 @@ export default function App() {
           />
         </aside>
       </main>
+
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   );
 }

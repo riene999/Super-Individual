@@ -8,6 +8,8 @@ export interface RunState {
   runId: string | null;
   events: RunEvent[];
   phase: string;
+  /** 状态条专用：只由 phase.start 驱动的当前阶段，避免用 *.done 抢跑 */
+  stage: string;
   waitingForAnswers: boolean;
   /** ClarifyAgent 给的问题（含 aspect） */
   clarifyQuestions: ClarifyingQ[];
@@ -18,6 +20,7 @@ export interface RunState {
   /** PM 主动忽略的历史 runId 集合 */
   dismissedRunIds: Set<string>;
   done: boolean;
+  cancelled: boolean;
   error: string | null;
 }
 
@@ -25,12 +28,14 @@ const initial: RunState = {
   runId: null,
   events: [],
   phase: "idle",
+  stage: "",
   waitingForAnswers: false,
   clarifyQuestions: [],
   recallMatches: [],
   recallSettled: false,
   dismissedRunIds: new Set(),
   done: false,
+  cancelled: false,
   error: null,
 };
 
@@ -43,6 +48,13 @@ export function useRun() {
       const events = [...prev.events, ev];
       const patch: Partial<RunState> = { events };
 
+      if (ev.type === "run.started") {
+        patch.phase = "starting";
+        patch.stage = "starting";
+        patch.done = false;
+        patch.cancelled = false;
+        patch.error = null;
+      }
       if (ev.type === "clarify.questions") {
         const raw = (ev.payload.questions as Array<string | ClarifyingQ>) ?? [];
         const qs: ClarifyingQ[] = raw.map((r) =>
@@ -58,7 +70,15 @@ export function useRun() {
         patch.recallMatches = (ev.payload.matches as RecallMatchView[]) ?? [];
         patch.recallSettled = true;
       }
-      if (ev.type === "plan.done")      patch.phase = "plan";
+      if (ev.type === "phase.start") {
+        const raw = String((ev.payload as { phase?: string }).phase ?? "");
+        const norm = raw.startsWith("code:") ? "code" : raw;
+        patch.phase = norm;
+        patch.stage = norm;
+      }
+      if (ev.type === "plan.done" || ev.type === "plan.generic") patch.phase = "plan";
+      if (ev.type === "spec.ready") patch.phase = "plan";
+      if (ev.type === "spec.updated") patch.phase = "commit";
       if (ev.type === "locate.done") {
         patch.phase = "code";
         if (!prev.recallSettled) patch.recallSettled = true;
@@ -68,7 +88,14 @@ export function useRun() {
       if (ev.type === "verify.running") patch.phase = "verify";
       if (ev.type === "verify.done")    patch.phase = "commit";
       if (ev.type === "commit.done")    patch.phase = "done";
-      if (ev.type === "run.completed")  { patch.phase = "done"; patch.done = true; }
+      if (ev.type === "run.completed")  { patch.phase = "done"; patch.stage = "done"; patch.done = true; }
+      if (ev.type === "run.cancelled")  {
+        patch.phase = "cancelled";
+        patch.stage = "cancelled";
+        patch.done = true;
+        patch.cancelled = true;
+        patch.waitingForAnswers = false;
+      }
       if (ev.type === "run.error")      { patch.error = String(ev.payload.message ?? "unknown error"); patch.done = true; }
       if (ev.type === "recall.dismissed") {
         const hid = String(ev.payload.historicalRunId);
@@ -81,19 +108,8 @@ export function useRun() {
     });
   }, []);
 
-  const startRun = useCallback(async (text: string) => {
+  const connectStream = useCallback((runId: string) => {
     esRef.current?.close();
-    setState({ ...initial, phase: "starting", dismissedRunIds: new Set() });
-
-    const res = await fetch(`${API}/runs`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text }),
-    });
-    const { runId } = await res.json() as { runId: string };
-
-    setState((prev) => ({ ...prev, runId }));
-
     const es = new EventSource(`${API}/runs/${runId}/stream`);
     esRef.current = es;
 
@@ -106,6 +122,21 @@ export function useRun() {
     };
   }, [appendEvent]);
 
+  const startRun = useCallback(async (text: string, repoUrl?: string, recallDisabled?: boolean, skillsDisabled?: boolean) => {
+    esRef.current?.close();
+    setState({ ...initial, phase: "starting", dismissedRunIds: new Set() });
+
+    const res = await fetch(`${API}/runs`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, ...(repoUrl ? { repoUrl } : {}), recallDisabled: !!recallDisabled, skillsDisabled: !!skillsDisabled }),
+    });
+    const { runId } = await res.json() as { runId: string };
+
+    setState((prev) => ({ ...prev, runId }));
+    connectStream(runId);
+  }, [connectStream]);
+
   const submitAnswers = useCallback(async (answers: Record<string, string>) => {
     if (!state.runId) return;
     setState((prev) => ({ ...prev, waitingForAnswers: false }));
@@ -116,15 +147,51 @@ export function useRun() {
     });
   }, [state.runId]);
 
+  const stopRun = useCallback(async () => {
+    if (!state.runId) return;
+    setState((prev) => ({ ...prev, phase: "stopping" }));
+    const res = await fetch(`${API}/runs/${state.runId}/stop`, { method: "POST" });
+    if (!res.ok) {
+      setState((prev) => ({ ...prev, error: "Unable to stop run", done: true }));
+    }
+  }, [state.runId]);
+
+  const resumeRun = useCallback(async () => {
+    if (!state.runId) return;
+    setState((prev) => ({ ...prev, done: false, cancelled: false, error: null, phase: "replaying" }));
+    const res = await fetch(`${API}/runs/${state.runId}/resume`, { method: "POST" });
+    if (!res.ok) {
+      setState((prev) => ({ ...prev, error: "Unable to resume run", done: true }));
+      return;
+    }
+    connectStream(state.runId);
+  }, [connectStream, state.runId]);
+
   const replayFrom = useCallback(async (fromEventIndex: number, newText: string) => {
     if (!state.runId) return;
     setState((prev) => ({ ...prev, done: false, error: null, phase: "replaying" }));
-    await fetch(`${API}/runs/${state.runId}/intervene`, {
+    const res = await fetch(`${API}/runs/${state.runId}/intervene`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ type: "replay", fromEventIndex, newText }),
     });
-  }, [state.runId]);
+    if (res.ok) connectStream(state.runId);
+  }, [connectStream, state.runId]);
+
+  const replayRunFrom = useCallback(async (runId: string, fromEventIndex: number, newText: string) => {
+    esRef.current?.close();
+    setState({ ...initial, runId, phase: "replaying", dismissedRunIds: new Set() });
+    const res = await fetch(`${API}/runs/${runId}/intervene`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "replay", fromEventIndex, newText }),
+    });
+    if (!res.ok) {
+      setState((prev) => ({ ...prev, error: "Unable to replay run", done: true }));
+      return;
+    }
+    connectStream(runId);
+  }, [connectStream]);
 
   const dismissRecall = useCallback(async (historicalRunId: string) => {
     if (!state.runId) return;
@@ -135,5 +202,5 @@ export function useRun() {
     });
   }, [state.runId]);
 
-  return { state, startRun, submitAnswers, replayFrom, dismissRecall };
+  return { state, startRun, stopRun, resumeRun, submitAnswers, replayFrom, replayRunFrom, dismissRecall };
 }

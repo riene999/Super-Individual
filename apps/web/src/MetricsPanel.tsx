@@ -1,5 +1,4 @@
 import type { GlobalMetrics, Stats } from "./metricsTypes.js";
-import BaselineCompareCard from "./BaselineCompareCard.js";
 
 function fmtCost(v: number): string { return `¥${v.toFixed(4)}`; }
 
@@ -32,7 +31,6 @@ export default function MetricsPanel({ data, loading, refresh }: Props) {
           </div>
           <div className="metrics-empty">还没有 LLM 调用记录。跑一次需求后再来看。</div>
         </div>
-        <BaselineCompareCard />
       </>
     );
   }
@@ -55,8 +53,6 @@ export default function MetricsPanel({ data, loading, refresh }: Props) {
           ))}
         </div>
       </div>
-
-      <BaselineCompareCard />
     </>
   );
 }
