@@ -19,16 +19,34 @@ export default function RepoPanel({ state, onUrlChange, onClone, onReset, onRebu
       <div className="repo-panel-label">
         <i className="ti ti-brand-github" aria-hidden="true" />
         目标仓库
-        {nwo && status === "ready" && (
+        {nwo && (status === "ready" || status === "rebuilding") && (
           <span className="repo-badge ready">
             <i className="ti ti-circle-check" aria-hidden="true" />
             {nwo}
           </span>
         )}
-        {nwo && status === "ready" && (
-          <span className={`repo-badge ${specReady ? "ready" : "pending"}`}>
-            <i className={`ti ${specReady ? "ti-file-check" : "ti-file-description"}`} aria-hidden="true" />
-            {specReady ? `规范 ${state.spec?.fileCount ?? 0}` : "规范待生成"}
+        {nwo && (status === "ready" || status === "rebuilding") && (
+          <span className="spec-status">
+            {specReady && (
+              <span className="repo-badge ready">
+                <i className="ti ti-file-check" aria-hidden="true" />
+                规范 {state.spec?.fileCount ?? 0}
+              </span>
+            )}
+            <button
+              className="spec-action-btn"
+              onClick={() => onRebuildSpec(repoUrl)}
+              disabled={busy || resetDisabled}
+              title={specReady ? "重新摘要全部文件，重建代码规范索引（含接口签名）" : "摘要全部文件，创建代码规范索引"}
+            >
+              {status === "rebuilding" ? (
+                <><i className="ti ti-loader-2 spin" aria-hidden="true" />{specReady ? "重建中…" : "创建中…"}</>
+              ) : specReady ? (
+                <><i className="ti ti-refresh" aria-hidden="true" />重建</>
+              ) : (
+                <><i className="ti ti-sparkles" aria-hidden="true" />创建规范</>
+              )}
+            </button>
           </span>
         )}
       </div>
@@ -63,18 +81,6 @@ export default function RepoPanel({ state, onUrlChange, onClone, onReset, onRebu
             <><i className="ti ti-loader-2 spin" aria-hidden="true" />初始化中…</>
           ) : (
             <><i className="ti ti-rewind" aria-hidden="true" />初始化</>
-          )}
-        </button>
-        <button
-          className="repo-reset-btn"
-          onClick={() => onRebuildSpec(repoUrl)}
-          disabled={!repoUrl.trim() || busy || !nwo || resetDisabled}
-          title="重新摘要全部文件，重建代码规范索引（含接口签名）"
-        >
-          {status === "rebuilding" ? (
-            <><i className="ti ti-loader-2 spin" aria-hidden="true" />重建规范中…</>
-          ) : (
-            <><i className="ti ti-refresh" aria-hidden="true" />重建规范</>
           )}
         </button>
       </div>

@@ -217,8 +217,8 @@ export default function App() {
             </div>
 
             {activityTab === "events" ? (
-              <div className="event-stream" ref={feedRef}>
-                {stageActive ? (
+              <>
+                {stageActive && (
                   <div className="stage-bar">
                     <span className="stage-icon"><i className="ti ti-activity" aria-hidden="true" /></span>
                     <span className="stage-text">
@@ -226,10 +226,10 @@ export default function App() {
                       <span className="stage-dots"><i /><i /><i /></span>
                     </span>
                   </div>
-                ) : (
-                  state.events.filter((ev) => ev.type !== "recall.matched").length === 0 && !state.error && (
-                    <div className="activity-empty">运行阶段信息会显示在这里</div>
-                  )
+                )}
+                <div className="event-stream" ref={feedRef}>
+                {!stageActive && state.events.filter((ev) => ev.type !== "recall.matched").length === 0 && !state.error && (
+                  <div className="activity-empty">运行阶段信息会显示在这里</div>
                 )}
                 {state.events
                   .filter((ev) => ev.type !== "recall.matched")
@@ -248,7 +248,8 @@ export default function App() {
                     </div>
                   </div>
                 )}
-              </div>
+                </div>
+              </>
             ) : (
               <RunHistoryPanel
                 runs={recentRuns}

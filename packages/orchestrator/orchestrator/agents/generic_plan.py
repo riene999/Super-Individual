@@ -4,8 +4,8 @@ import json
 import re
 from pathlib import Path
 
-from orchestrator.skills.base import Skill, default_generate, default_locate
-from orchestrator.types import FileStep, RepoContext, SkillPlan
+from orchestrator.skills.base import Skill
+from orchestrator.types import FileStep, RepoContext
 
 MAX_GENERIC_FILES = 12
 
@@ -118,21 +118,5 @@ def steps_from_file_dicts(files: object) -> list[FileStep]:
     return steps
 
 
-class GenericSkill(Skill):
-    """仅作为 locate/generate 的执行载体；规划由 plan_loop 负责。"""
-
-    def __init__(self) -> None:
-        super().__init__(
-            name="generic",
-            description="通用推理执行载体（规划走 plan_loop）",
-            match_words=[],
-            build_steps=lambda _req, _ctx: [],
-        )
-
-    async def plan(self, _req, _ctx) -> SkillPlan:
-        raise RuntimeError("GenericSkill.plan 不应被直接调用；规划走 plan_loop")
-
-
-generic_skill = GenericSkill()
-generic_skill.locate = default_locate  # type: ignore[method-assign]
-generic_skill.generate = default_generate  # type: ignore[method-assign]
+# 仅作为 locate/generate 的执行载体；规划与澄清统一走 plan_loop。
+generic_skill = Skill(name="generic", description="通用推理执行载体（规划与澄清走 plan_loop）")

@@ -319,6 +319,35 @@ select:focus-visible {
   background: color-mix(in srgb, var(--warn) 18%, transparent);
   color: var(--warn-text);
 }
+.spec-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.spec-action-btn {
+  font: inherit;
+  font-weight: 500;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  border: 1px solid var(--border, rgba(127, 127, 127, 0.25));
+  background: transparent;
+  color: var(--text-secondary);
+  transition: background 0.15s, color 0.15s;
+}
+.spec-action-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--purple-600) 12%, transparent);
+  color: var(--purple-600);
+  border-color: var(--purple-600);
+}
+.spec-action-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
 .repo-panel-row {
   display: flex;
   gap: 8px;

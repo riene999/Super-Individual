@@ -1,17 +1,16 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
 from orchestrator.llm.doubao import LLMClient
 from orchestrator.repo.conduit import ConduitRepo
-from orchestrator.types import ChangeSet, ClarifiedRequest, FileChange, FilePatch, FileStep, RepoContext, SkillPlan
+from orchestrator.types import ChangeSet, FileChange, FilePatch, FileStep, RepoContext, SkillPlan
 
 
 ReferenceProvider = Callable[[FileStep, RepoContext], str | None]
-BuildSteps = Callable[[ClarifiedRequest, RepoContext], list[FileStep]]
 
 
 class LocateError(Exception):
@@ -24,37 +23,17 @@ class LocateError(Exception):
 
 @dataclass
 class Skill:
+    """locate/generate 的执行载体；规划与澄清由 plan_loop 负责，这里不再做关键词匹配或静态步骤生成。"""
+
     name: str
     description: str
-    match_words: list[str]
-    build_steps: BuildSteps
-    match_threshold: int = 4
-    required_words: list[str] = field(default_factory=list)
-    possible_aspects: list[str] = field(default_factory=list)
-    aspect_question_template: dict[str, dict[str, str]] = field(default_factory=dict)
     reference_for: ReferenceProvider | None = None
-    custom_match: Callable[[ClarifiedRequest, float], float] | None = None
-
-    def match(self, req: ClarifiedRequest) -> float:
-        score = keyword_match(req, self.match_words, self.match_threshold, self.required_words)
-        return self.custom_match(req, score) if self.custom_match else score
-
-    async def plan(self, req: ClarifiedRequest, ctx: RepoContext) -> SkillPlan:
-        return SkillPlan(skillName=self.name, files=self.build_steps(req, ctx))
 
     async def locate(self, plan: SkillPlan, ctx: RepoContext) -> ChangeSet:
         return await default_locate(plan, ctx, self.reference_for)
 
     async def generate(self, changes: ChangeSet, llm: LLMClient, repo: "ConduitRepo | None" = None) -> list[FilePatch]:
         return await default_generate(changes, llm, repo)
-
-
-def keyword_match(req: ClarifiedRequest, words: list[str], threshold: int, required_words: list[str] | None = None) -> float:
-    haystack = " ".join([req.summary, req.fieldName, req.businessRule, req.displayLocation]).lower()
-    if required_words and not any(w.lower() in haystack for w in required_words):
-        return 0.0
-    hits = sum(1 for w in words if w.lower() in haystack)
-    return min(hits / threshold, 1.0)
 
 
 async def default_locate(
