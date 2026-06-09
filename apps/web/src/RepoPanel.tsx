@@ -5,12 +5,13 @@ interface RepoPanelProps {
   onUrlChange: (url: string) => void;
   onClone: (url: string) => void;
   onReset: (url: string) => void;
+  onRebuildSpec: (url: string) => void;
   resetDisabled?: boolean;
 }
 
-export default function RepoPanel({ state, onUrlChange, onClone, onReset, resetDisabled = false }: RepoPanelProps) {
+export default function RepoPanel({ state, onUrlChange, onClone, onReset, onRebuildSpec, resetDisabled = false }: RepoPanelProps) {
   const { repoUrl, nwo, status, error } = state;
-  const busy = status === "cloning" || status === "resetting";
+  const busy = status === "cloning" || status === "resetting" || status === "rebuilding";
   const specReady = Boolean(state.spec?.currentReady);
 
   return (
@@ -62,6 +63,18 @@ export default function RepoPanel({ state, onUrlChange, onClone, onReset, resetD
             <><i className="ti ti-loader-2 spin" aria-hidden="true" />初始化中…</>
           ) : (
             <><i className="ti ti-rewind" aria-hidden="true" />初始化</>
+          )}
+        </button>
+        <button
+          className="repo-reset-btn"
+          onClick={() => onRebuildSpec(repoUrl)}
+          disabled={!repoUrl.trim() || busy || !nwo || resetDisabled}
+          title="重新摘要全部文件，重建代码规范索引（含接口签名）"
+        >
+          {status === "rebuilding" ? (
+            <><i className="ti ti-loader-2 spin" aria-hidden="true" />重建规范中…</>
+          ) : (
+            <><i className="ti ti-refresh" aria-hidden="true" />重建规范</>
           )}
         </button>
       </div>

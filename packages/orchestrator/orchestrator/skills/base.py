@@ -201,9 +201,9 @@ _TOOL_PROTOCOL = """
 {"action":"read_file","path":"相对路径","start":1,"end":120}
 {"action":"list_files","glob":"如 backend/middleware/*.js"}
 
-写新文件前务必先确认：要 import 的模块真实路径与导出名、要复用的 hook/context 的真实返回字段、同类既有文件的写法、既有模型的注册名。不要臆造。
+硬性要求：在使用任何**项目内部**的导入（hook / context / 组件 / service / helper / 模型）之前，必须先用 read_file 或 grep 确认它的真实导出名、调用签名（入参与返回结构）与用法，不得凭记忆假设；只有第三方库（node_modules 里的）可凭通识直接用。上面若已给出该符号的接口签名，可据此使用、无需再查。
 
-查清楚后（或不需要查时），**直接输出该文件的完整内容本身**——纯代码，不要再输出 JSON、不要解释、不要用 markdown 代码块包裹。
+查清楚后（或确实无需查时），**直接输出该文件的完整内容本身**——纯代码，不要再输出 JSON、不要解释、不要用 markdown 代码块包裹。
 """
 
 

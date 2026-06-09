@@ -9,7 +9,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+from orchestrator.agents import code_spec
 from orchestrator.events import store as event_store
+from orchestrator.llm.doubao import create_doubao_client
 from orchestrator.metrics.aggregator import aggregate_global, aggregate_run, compare_runs
 from orchestrator.repo import spec_store
 from orchestrator.repo.conduit import ConduitRepo, REPOS_DIR
@@ -95,6 +97,18 @@ async def reset_repo(body: RepoSetup):
     try:
         repo = await loop.run_in_executor(None, ConduitRepo.reset_from_url, body.repoUrl)
         return {"nwo": repo.upstream_nwo, "status": "ready", "reset": True, "spec": spec_store.status(repo.upstream_nwo, repo.repo_path)}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=err(str(e)))
+
+
+@app.post("/api/repos/spec/rebuild")
+async def rebuild_spec(body: RepoSetup):
+    """手动全量重建代码规范索引（重摘要所有文件，填充 interfaces）。"""
+    try:
+        repo = await asyncio.get_event_loop().run_in_executor(None, ConduitRepo.from_url, body.repoUrl)
+        llm = create_doubao_client({"runId": "_spec_rebuild"})
+        status = await code_spec.ensure_current(repo, llm, run_id="_spec_rebuild", rebuild=True)
+        return {"ok": True, "status": status, "spec": spec_store.status(repo.upstream_nwo, repo.repo_path)}
     except Exception as e:
         raise HTTPException(status_code=400, detail=err(str(e)))
 

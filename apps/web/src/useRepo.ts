@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 
 const API = "/api";
 
-export type RepoStatus = "idle" | "cloning" | "resetting" | "ready" | "error";
+export type RepoStatus = "idle" | "cloning" | "resetting" | "rebuilding" | "ready" | "error";
 
 export interface RepoSpecStatus {
   key: string;
@@ -75,5 +75,22 @@ export function useRepo() {
     }
   }, []);
 
-  return { state, setRepoUrl, cloneRepo, resetRepo };
+  const rebuildSpec = useCallback(async (repoUrl: string) => {
+    if (!repoUrl.trim()) return;
+    setState((prev) => ({ ...prev, status: "rebuilding", error: null }));
+    try {
+      const res = await fetch(`${API}/repos/spec/rebuild`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repoUrl: repoUrl.trim() }),
+      });
+      const data = await res.json() as { error?: string; spec?: RepoSpecStatus };
+      if (!res.ok) throw new Error(data.error ?? "Rebuild failed");
+      setState((prev) => ({ ...prev, status: "ready", spec: data.spec ?? prev.spec }));
+    } catch (e) {
+      setState((prev) => ({ ...prev, status: "error", error: String(e) }));
+    }
+  }, []);
+
+  return { state, setRepoUrl, cloneRepo, resetRepo, rebuildSpec };
 }

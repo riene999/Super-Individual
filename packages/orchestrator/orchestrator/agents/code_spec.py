@@ -39,7 +39,7 @@ def _safe_read(repo: ConduitRepo, relative_path: str) -> str:
     return path.read_text(encoding="utf-8", errors="ignore")[:MAX_CONTENT_CHARS]
 
 
-async def summarize_file(repo: ConduitRepo, relative_path: str, llm: LLMClient, run_id: str | None = None) -> dict[str, Any]:
+async def summarize_file(repo: ConduitRepo, relative_path: str, llm: LLMClient, run_id: str | None = None) -> dict[str, Any] | None:
     content = _safe_read(repo, relative_path)
     fallback = spec_store.local_file_summary(relative_path, content)
     try:
@@ -60,15 +60,21 @@ async def summarize_file(repo: ConduitRepo, relative_path: str, llm: LLMClient, 
 {content}
 
 请输出 JSON：
-{{"summary":"一句话说明这个文件的主要逻辑和职责，80字以内","tags":["少量关键词"],"symbols":["主要函数/类/组件/导出名"]}}
+{{"summary":"一句话说明这个文件的主要逻辑和职责，80字以内","tags":["少量关键词"],"symbols":["主要函数/类/组件/导出名"],"interfaces":["每个对外导出的完整签名：入参与返回/形状"]}}
 
 要求：
 - summary 必须说明业务/技术职责，不要泛泛说“这个文件包含代码”。
 - tags 使用小写英文或常见中文词，最多 8 个。
-- symbols 最多 8 个。""",
+- symbols 最多 8 个。
+- interfaces：对每个对外导出，写清它的调用签名（入参顺序与含义）和返回/产出结构，例如：
+  · 函数/service：toggleCommentLike(slug, commentId, isLiked) -> comment
+  · hook：useAuth() -> 返回对象，字段 headers/isAuth/loggedUser
+  · React 组件：CommentList(props: comments、slug) -> JSX
+  · 模型：modelName=Comment, table=Comments, fields=[id, body, likeCount]
+  最多 8 条；据实抽取，不要臆造。""",
                 },
             ],
-            {"temperature": 0.1, "maxTokens": 500},
+            {"temperature": 0.1, "maxTokens": 800},
             {"agent": "code-spec:summarize", "runId": run_id or "_global"},
         )
         data = _clean_json(result["text"])
@@ -76,10 +82,11 @@ async def summarize_file(repo: ConduitRepo, relative_path: str, llm: LLMClient, 
             "summary": str(data.get("summary") or fallback["summary"])[:300],
             "tags": [str(x)[:40] for x in (data.get("tags") or fallback["tags"])[:12]],
             "symbols": [str(x)[:80] for x in (data.get("symbols") or fallback["symbols"])[:12]],
+            "interfaces": [str(x)[:200] for x in (data.get("interfaces") or [])[:8]],
             "imports": fallback.get("imports", []),
         }
     except Exception:
-        return fallback
+        return None  # 摘要失败（网络/解析等）：返回 None 让调用方保留旧条目，不要用空摘要覆盖好数据
 
 
 def _entry(repo: ConduitRepo, relative_path: str, summary: dict[str, Any]) -> dict[str, Any]:
@@ -91,12 +98,13 @@ def _entry(repo: ConduitRepo, relative_path: str, summary: dict[str, Any]) -> di
         "summary": summary.get("summary", ""),
         "tags": summary.get("tags", []),
         "symbols": summary.get("symbols", []),
+        "interfaces": summary.get("interfaces", []),
         "imports": summary.get("imports", []),
         "updatedAt": int(time.time() * 1000),
     }
 
 
-async def ensure_current(repo: ConduitRepo, llm: LLMClient, run_id: str | None = None) -> dict[str, Any]:
+async def ensure_current(repo: ConduitRepo, llm: LLMClient, run_id: str | None = None, rebuild: bool = False) -> dict[str, Any]:
     current = spec_store.read_spec(repo.upstream_nwo, repo.repo_path, "current")
     if current is None:
         current = spec_store.empty_spec(repo.upstream_nwo, repo.repo_path, repo.get_context().branch)
@@ -107,7 +115,9 @@ async def ensure_current(repo: ConduitRepo, llm: LLMClient, run_id: str | None =
     for relative_path in files:
         absolute_path = repo.repo_path / relative_path
         h = spec_store.file_hash(absolute_path)
-        if current_files.get(relative_path, {}).get("hash") != h:
+        entry = current_files.get(relative_path, {})
+        # rebuild=全量重摘要；否则 hash 变了重摘要，老条目缺 interfaces 字段（旧 schema）也重摘要一次做迁移
+        if rebuild or entry.get("hash") != h or "interfaces" not in entry:
             changed.append(relative_path)
 
     removed = [path for path in list(current_files.keys()) if path not in set(files)]
@@ -119,6 +129,12 @@ async def ensure_current(repo: ConduitRepo, llm: LLMClient, run_id: str | None =
     async def _summarize(relative_path: str) -> tuple[str, dict[str, Any]]:
         async with sem:
             summary = await summarize_file(repo, relative_path, llm, run_id)
+        if summary is None:
+            # 摘要失败：优先保留旧条目（别用空摘要覆盖好数据），没有旧的才用本地兜底
+            old = current_files.get(relative_path)
+            if old:
+                return relative_path, old
+            summary = spec_store.local_file_summary(relative_path, _safe_read(repo, relative_path))
         return relative_path, _entry(repo, relative_path, summary)
 
     for relative_path, entry in await asyncio.gather(*(_summarize(p) for p in changed)):
@@ -165,6 +181,11 @@ async def update_files(repo: ConduitRepo, llm: LLMClient, paths: list[str], run_
     async def _summarize(normalized: str) -> tuple[str, dict[str, Any]]:
         async with sem:
             summary = await summarize_file(repo, normalized, llm, run_id)
+        if summary is None:
+            old = current_files.get(normalized)
+            if old:
+                return normalized, old
+            summary = spec_store.local_file_summary(normalized, _safe_read(repo, normalized))
         return normalized, _entry(repo, normalized, summary)
 
     for normalized, entry in await asyncio.gather(*(_summarize(p) for p in to_summarize)):
@@ -222,10 +243,13 @@ def symbol_map_for(repo: ConduitRepo, paths: list[str]) -> str:
         if not entry:
             continue
         symbols = ", ".join(str(x) for x in (entry.get("symbols") or [])[:12])
+        interfaces = entry.get("interfaces") or []
         imports = " ; ".join(str(x) for x in (entry.get("imports") or [])[:8])
         parts = [f"- {p}"]
         if symbols:
             parts.append(f"导出/符号: {symbols}")
+        if interfaces:
+            parts.append("接口签名(入参->返回):\n    " + "\n    ".join(str(x) for x in interfaces[:8]))
         if imports:
             parts.append(f"import 写法: {imports}")
         lines.append("\n  ".join(parts))
@@ -292,6 +316,7 @@ async def select_relevant_context(
 
 请挑出实现该需求最相关的文件：既包括很可能需要改动的文件，也包括能体现相关约定/可参考范例的文件（同类已有功能、对应模型、路由注册文件、可参考组件等）。
 - 最多 {SELECT_MAX} 个；宁缺毋滥，但不要漏掉明显涉及的层（model/controller/route/页面/组件）。
+- 若需求涉及鉴权/会话、网络请求封装、错误处理、全局状态/上下文、共享配置等**横切关注点**，也要把对应的基础设施文件选上（新代码很可能要调用它们，需要知道其真实接口）。
 - path 必须从上面目录里原样照抄，不要臆造。
 输出 JSON：{{"paths":["...","..."]}}""",
                 },

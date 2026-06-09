@@ -24,7 +24,7 @@ function fmtCost(v: number): string {
 export default function App() {
   const [text, setText] = useState(DEMO_PROMPT);
   const { state, startRun, stopRun, resumeRun, submitAnswers, replayFrom, replayRunFrom, dismissRecall } = useRun();
-  const { state: repoState, setRepoUrl, cloneRepo, resetRepo } = useRepo();
+  const { state: repoState, setRepoUrl, cloneRepo, resetRepo, rebuildSpec } = useRepo();
   const feedRef = useRef<HTMLDivElement>(null);
   const [running, setRunning] = useState(false);
   const [metricsSignal, setMetricsSignal] = useState(0);
@@ -138,7 +138,7 @@ export default function App() {
 
       <main className="layout">
         <section className="main-col">
-          <RepoPanel state={repoState} onUrlChange={setRepoUrl} onClone={cloneRepo} onReset={handleResetRepo} resetDisabled={running} />
+          <RepoPanel state={repoState} onUrlChange={setRepoUrl} onClone={cloneRepo} onReset={handleResetRepo} onRebuildSpec={rebuildSpec} resetDisabled={running} />
           <div className="input-card">
             <textarea
               className="input-text"
